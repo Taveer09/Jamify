@@ -10,9 +10,11 @@ Live-версия пока рассчитана на закрытую бету: 
 
 ## Запуск
 
-Нужен Node.js 22.12 или новее. В корне проекта:
+Нужен Node.js 22.12 или новее. Склонируй репозиторий и запусти:
 
 ```sh
+git clone https://github.com/Taveer09/Jamify.git
+cd Jamify
 npm ci
 cp .env.example .env.local
 npm run dev
