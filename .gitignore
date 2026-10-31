@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env*
+!.env.example
+.DS_Store
+.taste-skill/inspect/
+.taste-skill/before/
+.taste-skill/after/
+test-results/
+playwright-report/
+*.local
