@@ -78,6 +78,33 @@ describe('OAuth PKCE capability contracts', () => {
     await expect(auth.complete(callback)).rejects.toThrow(/устарел/)
     expect(fetcher).toHaveBeenCalledTimes(1)
   })
+  it('distinguishes an immediate transport failure and consumes the callback without retrying', async () => {
+    const { auth, callback, fetcher, storage } = await prepare()
+    fetcher.mockRejectedValue(new TypeError('private network diagnostic'))
+    await expect(auth.complete(callback)).rejects.toThrow('Браузер не смог выполнить запрос входа')
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(storage.length).toBe(0)
+    expect(auth.hasSession()).toBe(false)
+  })
+  it('reports malformed successful token responses separately from transport errors', async () => {
+    const { auth, callback, fetcher } = await prepare()
+    fetcher.mockResolvedValue(new Response('invalid-json', { status: 200 }))
+    await expect(auth.complete(callback)).rejects.toThrow('ответ в неожиданном формате')
+    expect(auth.hasSession()).toBe(false)
+  })
+  it('reports a deadline separately and aborts the exchange without retrying', async () => {
+    const { auth, callback, fetcher } = await prepare()
+    vi.useFakeTimers()
+    try {
+      fetcher.mockImplementation(() => new Promise<Response>(() => {}))
+      const assertion = expect(auth.complete(callback)).rejects.toThrow('Spotify не ответил за 20 секунд')
+      await vi.advanceTimersByTimeAsync(20_000)
+      await assertion
+      expect(fetcher.mock.calls[0][1]?.signal?.aborted).toBe(true)
+      expect(fetcher).toHaveBeenCalledTimes(1)
+      expect(auth.hasSession()).toBe(false)
+    } finally { vi.useRealTimers() }
+  })
   it('refreshes once for concurrent callers and retains a non-rotated refresh token', async () => {
     const { auth, callback, fetcher, storage, advance } = await prepare()
     fetcher.mockResolvedValueOnce(json(token)).mockResolvedValueOnce(json({ ...token, access_token: 'renewed-access', refresh_token: undefined }))

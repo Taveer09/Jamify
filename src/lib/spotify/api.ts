@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { withRequestTimeout } from './request'
 
 const API = 'https://api.spotify.com/v1/'
 const ownerSchema = z.object({ id: z.string() })
@@ -63,22 +64,25 @@ export class SpotifyApi {
   async request(path: string, method = 'GET', body?: unknown): Promise<unknown> {
     const url = apiUrl(path)
     const accessToken = await this.token()
-    let response: Response
+    let result: { response: Response; body: unknown }
     try {
-      response = await this.fetcher(url, {
-        method, headers: { Authorization: `Bearer ${accessToken}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
-        body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(20_000),
+      result = await withRequestTimeout(async (signal) => {
+        const response = await this.fetcher(url, {
+          method, headers: { Authorization: `Bearer ${accessToken}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+          body: body === undefined ? undefined : JSON.stringify(body), signal,
+        })
+        return { response, body: response.ok && response.status !== 204 ? await response.json() : null }
       })
     } catch {
       throw new SpotifyError(null, null, method !== 'GET')
     }
+    const { response } = result
     if (!response.ok) {
       const header = response.headers.get('Retry-After')
       const seconds = header === null ? NaN : Number(header)
       throw new SpotifyError(response.status, Number.isFinite(seconds) ? seconds : null, method !== 'GET' && response.status >= 500)
     }
-    if (response.status === 204) return null
-    try { return await response.json() } catch { throw new SpotifyError(null, null, method !== 'GET') }
+    return result.body
   }
 
   async currentUser(): Promise<{ id: string; display_name?: string | null }> {

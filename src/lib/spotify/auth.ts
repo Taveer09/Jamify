@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { RequestTimeoutError, withRequestTimeout } from './request'
 
 export const SCOPES = [
   'playlist-read-private', 'playlist-modify-private', 'playlist-modify-public',
@@ -118,20 +119,27 @@ export class SpotifyAuth {
 
   private async exchange(body: URLSearchParams, clientId: string, previousRefresh?: string): Promise<string> {
     const generation = this.generation
-    let response: Response
+    let result: { response: Response; body: unknown }
     try {
-      response = await this.fetcher(TOKEN_URL, {
-        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body, signal: AbortSignal.timeout(20_000),
+      result = await withRequestTimeout(async (signal) => {
+        const response = await this.fetcher(TOKEN_URL, {
+          method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body, signal,
+        })
+        return { response, body: response.ok ? await response.json() : null }
       })
-    } catch {
-      throw new Error('Не удалось связаться со Spotify. Проверь подключение и начни вход заново.')
+    } catch (error) {
+      if (error instanceof RequestTimeoutError) {
+        throw new Error('Spotify не ответил за 20 секунд. Начни вход заново. Если это повторяется во встроенном браузере, открой Jamify в Safari или Chrome.', { cause: error })
+      }
+      if (error instanceof SyntaxError) throw new Error('Spotify вернул ответ в неожиданном формате. Начни вход заново.', { cause: error })
+      throw new Error('Браузер не смог выполнить запрос входа к Spotify. Открой Jamify в Safari или Chrome и начни вход заново.', { cause: error })
     }
+    const { response } = result
     if (!response.ok) {
       if (response.status === 400 || response.status === 401) this.logout()
       throw new Error(`Spotify не подтвердил вход (HTTP ${response.status}). Подключи аккаунт ещё раз.`)
     }
-    const parsed = tokenSchema.safeParse(await response.json())
+    const parsed = tokenSchema.safeParse(result.body)
     if (!parsed.success) throw new Error('Spotify вернул неподдерживаемый ответ авторизации.')
     const token = parsed.data
     if (generation !== this.generation) throw new Error('Аккаунт отключён. Начни вход заново.')

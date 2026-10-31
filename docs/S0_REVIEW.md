@@ -10,6 +10,7 @@
 | P2 | Late not_ready старого плеера сбрасывал готовность нового | disposed guards на событие и выдачу OAuth token; playback lifecycle regression |
 | P2 | Успех probe аккаунта A отображался для аккаунта B | UI читает journal только при совпадении accountId; Playwright regression показывает progress=1 и заблокированное удаление для B |
 | P3 | Invalid state при старой сессии сохранял refresh token | Fail-closed logout; auth regression проверяет очистку и отсутствие token exchange |
+| P2 | Отсутствующий AbortSignal.timeout ошибочно отображался как сетевая ошибка OAuth | Переносимый AbortController + deadline для запроса и чтения тела; браузерный regression без native helper, unit tests таймаута и диагностики. Причина конкретной пользовательской ошибки пока не подтверждена |
 | P2/покрытие | Чтение смешанного плейлиста не запрашивало эпизоды явно | additional_types=track,episode; null/локальные entries остаются в наблюдаемом списке |
 
-Полный итог: 48 Vitest tests, 10 Playwright tests, typecheck, lint, build прошли. Живые OAuth grant, DRM-плеер, private playlist create/append/delete и relinking остаются not-run. Connect fallback относится к следующему live-этапу. Автоматическое восстановление неоднозначной тестовой записи S0 не заявляется; повтор заблокирован.
+Полный итог: 55 Vitest tests, 11 Playwright tests, typecheck, lint, build прошли. Первая живая попытка OAuth завершилась ошибкой связи по сообщению пользователя; после исправления повтор ещё не выполнен. Успешный OAuth grant не подтверждён. DRM-плеер, private playlist create/append/delete и relinking остаются not-run. Connect fallback относится к следующему live-этапу. Автоматическое восстановление неоднозначной тестовой записи S0 не заявляется; повтор заблокирован.

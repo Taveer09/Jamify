@@ -6,9 +6,11 @@
 
 Реализованы Vite/React/TypeScript-каркас, локальный экран подключения, PKCE/refresh, HTTP-адаптер, consistent pagination, SDK-адаптер и изолированная проба на новом приватном плейлисте. Документы перенесены из cases/playlist-swipe в docs; Client ID задан локально. Код и команды проверки существуют, дальнейшие scripts добавляются вместе с соответствующими этапами, без пустых зелёных заглушек.
 
-Проверено: typecheck, lint, production build, 48 capability tests и 10 Playwright-сценариев прошли. npm audit: 0 уязвимостей; minimatch закреплён на исправленной 11.0.3 через override, lint и tests с ним проходят. Браузер: Chromium 156, viewport 390/768/1440, blocked storage, OAuth callback cleanup, account binding, клавиатура. Taste lint: 0 FAIL/0 WARN; browser inspector: 0 FAIL/1 WARN (независимые панели разной высоты, обоснование в DESIGN.md). Все итоговые снимки просмотрены.
+Проверено: typecheck, lint, production build, 55 capability tests и 11 Playwright-сценариев прошли. npm audit: 0 уязвимостей; minimatch закреплён на исправленной 11.0.3 через override, lint и tests с ним проходят. Браузер: Chromium 156, viewport 390/768/1440, blocked storage, OAuth callback cleanup, account binding, клавиатура. Taste lint: 0 FAIL/0 WARN; browser inspector: 0 FAIL/1 WARN (независимые панели разной высоты, обоснование в DESIGN.md). Все итоговые снимки просмотрены.
 
 Независимое ревью выявило ошибки lifecycle/account binding; подтверждённые находки исправлены и закреплены regression tests (см. S0_REVIEW.md). Живой вход/звук/мутации ещё не подтверждены — полный S0 не закрыт. Публичный доступ ограничен Development Mode; скрытие Client ID это ограничение не меняет.
+
+После первой попытки пользователь сообщил о немедленной ошибке связи при возврате из Spotify. Воспроизведён аналогичный сбой при отсутствии AbortSignal.timeout; зависимость от этой функции убрана из OAuth и Web API. Таймаут охватывает также чтение ответа; ошибки сети, HTTP и неверного JSON различаются. Chromium достигает HTTP-ответа token endpoint без пользовательской авторизации, но это не подтверждает живой вход во встроенном браузере пользователя. Нужна новая попытка входа после исправления.
 
 Следующее действие пользователя: сохранить Developer App с redirect `http://127.0.0.1:5173/callback`, открыть локальный Jamify и пройти вход через Spotify. Не передавать Client Secret/пароль/токены.
 

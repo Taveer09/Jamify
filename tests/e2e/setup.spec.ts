@@ -85,3 +85,25 @@ test('a new account never inherits successful probe checks from a previous accou
   await expect(page.locator('body')).not.toContainText('old-test-playlist')
   await expect(page.getByRole('button', { name: 'Удалить A только из теста' })).toBeDisabled()
 })
+
+test('OAuth callback succeeds in browsers without AbortSignal.timeout', async ({ page }) => {
+  await page.route('https://**/*', (route) => route.abort())
+  await page.addInitScript(() => {
+    Object.defineProperty(AbortSignal, 'timeout', { value: undefined, configurable: true })
+    sessionStorage.setItem('jamify.oauth.transaction.v1', JSON.stringify({
+      clientId: 'a'.repeat(32), redirectUri: location.origin + '/callback',
+      state: 'fixture-state', verifier: 'A'.repeat(64), createdAt: Date.now(),
+    }))
+    window.fetch = async (input) => {
+      const url = new URL(input instanceof Request ? input.url : String(input))
+      const body = url.origin === 'https://accounts.spotify.com'
+        ? { access_token: 'fixture-access', refresh_token: 'fixture-refresh', expires_in: 3600, token_type: 'Bearer' }
+        : { id: 'fixture-account', display_name: 'Fixture account' }
+      return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+  })
+  await page.goto('/callback?code=fixture-code&state=fixture-state')
+  await expect(page.getByRole('button', { name: 'Проверить мои плейлисты' })).toBeVisible()
+  await expect(page.getByRole('alert')).not.toBeVisible()
+  await expect(page).toHaveURL('http://127.0.0.1:5173/')
+})
