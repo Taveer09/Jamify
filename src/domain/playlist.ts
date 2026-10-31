@@ -14,7 +14,7 @@ export function uniqueReviewEntries(entries: Entry[]): Entry[] {
   const seen = new Set<string>()
   return entries.filter((entry) => {
     const uri = entry.sourceUri
-    if (!uri || !entry.canPlay || seen.has(uri)) return false
+    if (!uri || entry.kind !== 'track' || !entry.canPlay || seen.has(uri)) return false
     seen.add(uri)
     return true
   })
@@ -36,7 +36,10 @@ export function buildApplyPlan(baseline: Baseline, decisions: Record<string, Dec
   const blockedReasons = new Set<string>()
   const groups = new Map<string, Entry[]>()
   for (const entry of baseline.orderedEntries) {
-    if (entry.sourceUri) groups.set(entry.sourceUri, [...(groups.get(entry.sourceUri) ?? []), entry])
+    if (!entry.sourceUri) continue
+    const group = groups.get(entry.sourceUri)
+    if (group) group.push(entry)
+    else groups.set(entry.sourceUri, [entry])
   }
   const requested = Object.entries(decisions).filter(([, decision]) => decision === 'remove').map(([uri]) => uri)
   for (const uri of requested) {

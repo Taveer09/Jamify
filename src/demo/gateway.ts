@@ -1,12 +1,29 @@
 import type { ApplyCoordinator, ApplyPlan, ApplyResult, Baseline, PlaylistGateway } from '../contracts'
 import { fingerprint } from '../domain/playlist'
 import { demoFixtures } from './fixtures'
+import type { JamifyStorage } from '../lib/persistence/database'
 
 export class DemoPlaylistGateway implements PlaylistGateway {
   private playlists = new Map(demoFixtures().map((baseline) => [baseline.playlistId, baseline]))
+  private initialized: Promise<void> | null = null
+  storageWarning = ''
+  constructor(private storage?: JamifyStorage) {}
+  private ready(): Promise<void> {
+    if (!this.initialized) this.initialized = (async () => {
+      try { await this.storage?.seedDemoLibrary([...this.playlists.values()]) }
+      catch { this.storage = undefined; this.storageWarning = 'Хранилище браузера недоступно. Демо работает до перезагрузки.' }
+    })()
+    return this.initialized
+  }
   async currentAccount() { return 'demo-account' }
-  async listPlaylists() { return [...this.playlists.values()].map((b) => ({ id: b.playlistId, name: b.playlistName, count: b.orderedEntries.length })) }
+  async listPlaylists() {
+    await this.ready()
+    const baselines = this.storage ? await this.storage.listDemoLibrary() : [...this.playlists.values()]
+    return baselines.map((b) => ({ id: b.playlistId, name: b.playlistName, count: b.orderedEntries.length }))
+  }
   async loadBaseline(playlistId: string): Promise<Baseline> {
+    await this.ready()
+    if (this.storage) return this.storage.loadDemoPlaylist(playlistId)
     const baseline = this.playlists.get(playlistId)
     if (!baseline) throw new Error('Демо-плейлист не найден.')
     return structuredClone(baseline)
@@ -15,26 +32,29 @@ export class DemoPlaylistGateway implements PlaylistGateway {
     const baseline = await this.loadBaseline(playlistId)
     if (baseline.snapshotId !== snapshotId) throw new Error('Версия плейлиста изменилась.')
     const remove = new Set(uris)
-    this.store({ ...baseline, orderedEntries: baseline.orderedEntries.filter((entry) => !entry.sourceUri || !remove.has(entry.sourceUri)) })
+    await this.store({ ...baseline, orderedEntries: baseline.orderedEntries.filter((entry) => !entry.sourceUri || !remove.has(entry.sourceUri)) }, snapshotId)
   }
   async createPrivatePlaylist(name: string): Promise<string> {
     const id = `demo-copy-${crypto.randomUUID()}`
-    this.store({ accountId: 'demo-account', playlistId: id, playlistName: name, snapshotId: '0', orderedEntries: [], fingerprint: '[]' })
+    await this.ready()
+    await this.store({ accountId: 'demo-account', playlistId: id, playlistName: name, snapshotId: '0', orderedEntries: [], fingerprint: '[]' }, null)
     return id
   }
   async appendItems(playlistId: string, uris: string[]): Promise<void> {
     const baseline = await this.loadBaseline(playlistId)
-    const known = [...this.playlists.values()].flatMap((b) => b.orderedEntries)
+    const known = (this.storage ? await this.storage.listDemoLibrary() : [...this.playlists.values()]).flatMap((b) => b.orderedEntries)
     const entries = uris.map((uri) => {
       const entry = known.find((item) => item.sourceUri === uri)
       if (!entry?.canCopy) throw new Error('Демо-запись нельзя скопировать.')
       return entry
     })
-    this.store({ ...baseline, orderedEntries: [...baseline.orderedEntries, ...entries] })
+    await this.store({ ...baseline, orderedEntries: [...baseline.orderedEntries, ...entries] }, baseline.snapshotId)
   }
-  private store(baseline: Baseline) {
+  private async store(baseline: Baseline, expectedSnapshotId: string | null) {
     const orderedEntries = baseline.orderedEntries.map((entry, index) => ({ ...entry, originalIndex: index, entryKey: `${baseline.playlistId}:${index}` }))
-    this.playlists.set(baseline.playlistId, { ...baseline, orderedEntries, fingerprint: fingerprint(orderedEntries), snapshotId: crypto.randomUUID() })
+    const next = { ...baseline, orderedEntries, fingerprint: fingerprint(orderedEntries), snapshotId: crypto.randomUUID() }
+    if (this.storage) await this.storage.saveDemoPlaylist(next, expectedSnapshotId)
+    this.playlists.set(baseline.playlistId, next)
   }
 }
 
