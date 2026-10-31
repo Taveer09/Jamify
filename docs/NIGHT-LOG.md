@@ -18,3 +18,8 @@
 - Около 02:02: S1 audio/playback/domain review закрыто; все 46 browser checks pass. Typecheck/lint/build и unit прогон завершаются перед коммитом. Временные диагностические файлы удалены, index.html восстановлен. S0 HTTP errors теперь сохраняют безопасный статус в UI, journal неизвестной записи остаётся заблокирован.
 - Живой no-store reconciliation снова вернул A,B,A,C; GET headers max-age=0. CORS OPTIONS разрешает DELETE. Причина первого отказа не установлена, blind retry не выполнялся. Safari SDK actual URI matched true, paused event false; физическая слышимость не проверена.
 - В процессе другой разрешённой настройки появились дополнительные frontend-skill инструкции в AGENTS.md. Изменения сохранены, не перезаписывались; применимые новые skills читать перед следующей UI-работой.
+
+- Около 02:19: S3 готов на demo gateway. Check90/90 pass, полный browser suite60/60 pass. Независимый Sol high reviewer нашёл и перепроверил исправления volatile cache, rollback clock, queue truncation, stale tab before apply. До S4 TOCTOU/write journal не закрыт; live writes не включались.
+- Один промежуточный browser suite имел ENOENT trace artifacts при параллельных тестах с общим test-results. Это исправлено разделением output reviewer запусков; финальный suite60/60 без этих ошибок.
+- Установлены idb8.0.4 и dev-only fake-indexeddb6.2.7, npm audit0. Добавлены фактические test:session и domain tests, без заглушек.
+- S5 UI делегирован Sol medium в src/components/styles и отдельный e2e, props заранее зафиксированы в contracts/review-ui.ts. Интегратор продолжает S4, единолично владеет contracts, persistence, screens и package. Это разрешённая PLAN параллель после S3.

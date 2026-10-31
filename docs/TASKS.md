@@ -82,4 +82,4 @@
 
 - Пользователь согласовал начало реализации; S0 выполнен локально, live gate ожидает живого входа и проб.
 - Независимая критика: см. PLAN_REVIEW.md.
-- S1: локальное demo/contracts выполнено, independent review с исправлениями пройдено. S2 live gate остаётся открыт из-за DELETE unknown. S3 — следующий независимый этап ночной работы. S4–S9 не завершены; фактические live результаты и команды — STATUS.md и API_CAPABILITIES.md.
+- S1: локальное demo/contracts выполнено, independent review с исправлениями пройдено. S2 live gate остаётся открыт из-за DELETE unknown. S3 session/persistence выполнен на demo gateway, review исправления проверены. S4 operation journal — следующий этап, S5 UI разрешён параллельно в отдельной зоне. S4–S9 не завершены; фактические live результаты и команды — STATUS.md и API_CAPABILITIES.md.
