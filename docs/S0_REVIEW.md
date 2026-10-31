@@ -15,3 +15,16 @@
 | P2/покрытие | Чтение смешанного плейлиста не запрашивало эпизоды явно | additional_types=track,episode; null/локальные entries остаются в наблюдаемом списке |
 
 Полный итог: 55 Vitest tests, 26 Playwright tests (Chromium и WebKit), typecheck, lint, build прошли. Первая живая попытка OAuth завершилась ошибкой связи по сообщению пользователя; после исправления повтор ещё не выполнен. Успешный OAuth grant не подтверждён. DRM-плеер, private playlist create/append/delete и relinking остаются not-run. Connect fallback относится к следующему live-этапу. Автоматическое восстановление неоднозначной тестовой записи S0 не заявляется; повтор заблокирован.
+
+
+## Ночное повторное ревью, 2026-11-01
+
+Два независимых reviewer проверили API/probe и auth/playback. Подтверждены и исправлены три P2:
+
+- Селект разрешал выбрать B во время чтения A; refresh списка сохранял старый snapshot. Селект блокируется при операции, refresh очищает snapshot. Browser regression с отложенным чтением и сменой выбора.
+- После connect timeout late ready оживлял отключённый SDK. Ошибка подключения теперь terminal/disposed, таймер/ожидание отменяются при disconnect; поздние события игнорируются.
+- player_state_changed(null) оставлял прежнее playing. Invalid/null state теперь снимает подтверждение через idle.
+
+Повторное SDK-ревью не нашло новых подтверждённых ошибок в diff. Дополнительно проверены connect=false → late ready и disconnect во время activation: 0 последующих play requests. Загрузка общего SDK script отменяется по своему 20-секундному timeout; это отдельно от pending device connect.
+
+Проверено: 58 capability tests и 32 Chromium/WebKit browser checks, typecheck/lint/build. Сквозной fixture flow покрывает чтение, подсчёт повторов, выбор треков, SDK connect/play/pause с actual URI, create private A,B,A,C, delete A → B,C, reload и logout; все playlist writes остаются в disposable target. Внешний snapshot edit блокирует DELETE. Эти результаты не подтверждают реальный звук или grant Spotify.

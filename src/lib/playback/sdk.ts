@@ -17,7 +17,7 @@ declare global {
     onSpotifyWebPlaybackSDKReady?: () => void
   }
 }
-export type PlayerNotice = { state: 'ready' | 'playing' | 'paused' | 'error'; uri?: string; message?: string }
+export type PlayerNotice = { state: 'idle' | 'ready' | 'playing' | 'paused' | 'error'; uri?: string; message?: string }
 let sdkPromise: Promise<Sdk> | null = null
 
 function loadSdk(): Promise<Sdk> {
@@ -42,6 +42,7 @@ export class BrowserPlayer {
   private player: SdkPlayer | null = null
   private deviceId: string | null = null
   private disposed = false
+  private cancelConnect: (() => void) | null = null
   constructor(private token: () => Promise<string>, private notify: (notice: PlayerNotice) => void) {}
 
   async connect(): Promise<void> {
@@ -58,11 +59,16 @@ export class BrowserPlayer {
     this.player = player
     await new Promise<void>((resolve, reject) => {
       const timer = window.setTimeout(() => reject(new Error('Spotify не подключил плеер. Проверь Premium и браузер.')), 20_000)
+      this.cancelConnect = () => {
+        window.clearTimeout(timer)
+        reject(new Error('Подключение плеера отменено.'))
+      }
       player.addListener('ready', (value) => {
         if (this.disposed) return
         const data = z.object({ device_id: z.string() }).safeParse(value)
         if (!data.success) return
         window.clearTimeout(timer)
+        this.cancelConnect = null
         this.deviceId = data.data.device_id
         this.notify({ state: 'ready' })
         resolve()
@@ -84,11 +90,12 @@ export class BrowserPlayer {
         if (this.disposed) return
         const data = z.object({ paused: z.boolean(), track_window: z.object({ current_track: z.object({ uri: z.string() }) }) }).safeParse(value)
         if (data.success) this.notify({ state: data.data.paused ? 'paused' : 'playing', uri: data.data.track_window.current_track.uri })
+        else this.notify({ state: 'idle' })
       })
       void player.connect().then((connected) => {
         if (!connected) { window.clearTimeout(timer); reject(new Error('Spotify не подключил устройство.')) }
       }).catch((error: unknown) => { window.clearTimeout(timer); reject(error) })
-    }).catch((error: unknown) => { player.disconnect(); this.player = null; throw error })
+    }).catch((error: unknown) => { this.disconnect(); throw error })
   }
 
   async play(uri: string, api: SpotifyApi): Promise<void> {
@@ -96,8 +103,13 @@ export class BrowserPlayer {
     // Called synchronously from a click, before the first await (browser autoplay policy).
     const activation = this.player.activateElement()
     await activation
+    if (this.disposed || !this.player || !this.deviceId) throw new Error('Плеер отключён. Подключи его заново.')
     await api.request(`me/player/play?device_id=${encodeURIComponent(this.deviceId)}`, 'PUT', { uris: [uri] })
   }
   async pause(): Promise<void> { await this.player?.pause() }
-  disconnect(): void { this.disposed = true; this.player?.disconnect(); this.player = null; this.deviceId = null }
+  disconnect(): void {
+    this.disposed = true
+    this.cancelConnect?.(); this.cancelConnect = null
+    this.player?.disconnect(); this.player = null; this.deviceId = null
+  }
 }
