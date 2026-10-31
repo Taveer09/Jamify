@@ -84,9 +84,10 @@ export class CapabilityProbe {
         const done: ProbeState = { ...state, status: 'verified', snapshotId: after.playlist.snapshot_id }
         this.save(done)
         return done
-      } catch {
+      } catch (error) {
         this.save({ ...state, status: 'unknown' })
-        throw new Error('Результат тестовой записи требует проверки в Spotify. Автоматический повтор отключён.')
+        if (error instanceof SpotifyError) throw error
+        throw new Error('Результат тестовой записи требует проверки в Spotify. Автоматический повтор отключён.', { cause: error })
       }
     })
   }
