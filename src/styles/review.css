@@ -91,3 +91,5 @@
  .review-summary dl > div { display: flex; }
  .review-summary dd { margin-top: 0; }
 }
+
+.save-status { font-size: 13px; color: var(--muted); margin: -16px 0 24px; }
