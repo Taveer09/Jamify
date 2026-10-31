@@ -2,25 +2,34 @@
 
 2026-11-01, Asia/Oral. Пользователь согласовал начало реализации. Репозиторий: [Taveer09/Jamify](https://github.com/Taveer09/Jamify), основная ветка `main`. Исходная рабочая ветка: `codex/jamify-foundation`.
 
-## S0 — локальная часть готова, живые проверки ожидаются
+## S0 — живое удаление ещё не подтверждено
 
 Реализованы Vite/React/TypeScript-каркас, локальный экран подключения, PKCE/refresh, HTTP-адаптер, consistent pagination, SDK-адаптер и изолированная проба на новом приватном плейлисте. Документы перенесены из cases/playlist-swipe в docs; Client ID задан локально. Код и команды проверки существуют, дальнейшие scripts добавляются вместе с соответствующими этапами, без пустых зелёных заглушек.
 
-Проверено: typecheck, lint, production build, 58 capability tests и 32 Playwright-сценария (Chromium и WebKit) прошли. npm audit: 0 уязвимостей; minimatch закреплён на исправленной 11.0.3 через override, lint и tests с ним проходят. Браузеры автопроверки: Chromium 156 и WebKit 27.2; viewport 390/768/1440, blocked storage, OAuth callback cleanup, account binding, клавиатура. Taste lint: 0 FAIL/0 WARN; browser inspector: 0 FAIL/1 WARN (независимые панели разной высоты, обоснование в DESIGN.md). Все итоговые снимки просмотрены.
+Проверено: typecheck, lint, production build, 73 unit/domain/capability tests и 46 Playwright-сценариев (Chromium и WebKit) прошли. npm audit: 0 уязвимостей; minimatch закреплён на исправленной 11.0.3 через override, lint и tests с ним проходят. Браузеры автопроверки: Chromium 156 и WebKit 27.2; viewport 390/768/1440, blocked storage, OAuth callback cleanup, account binding, клавиатура. Taste lint: 0 FAIL/0 WARN; browser inspector: 0 FAIL/1 WARN (независимые панели разной высоты, обоснование в DESIGN.md). Все итоговые снимки просмотрены.
 
-Независимое ревью выявило ошибки lifecycle/account binding; подтверждённые находки исправлены и закреплены regression tests (см. S0_REVIEW.md). Живой вход/звук/мутации ещё не подтверждены — полный S0 не закрыт. Публичный доступ ограничен Development Mode; скрытие Client ID это ограничение не меняет.
+Независимое ревью выявило ошибки lifecycle/account binding; подтверждённые находки исправлены и закреплены regression tests (см. S0_REVIEW.md). Живой OAuth/profile/refresh, создание/append/read теста и SDK actual URI подтвердились; DELETE остался unknown — полный S0 не закрыт. Публичный доступ ограничен Development Mode; скрытие Client ID это ограничение не меняет.
 
 После двух неудачных попыток входа причина воспроизведена в самом Safari: сохранённый как метод объекта нативный fetch выбрасывал `TypeError: Can only call Window.fetch on instances of Window` до отправки HTTP. Обычный глобальный fetch в той же вкладке получил HTTP 400 от token endpoint и HTTP 401 от `/me` на заведомо невалидных данных. Конструкторы OAuth и API теперь привязывают fetch к globalThis. Исправленные адаптеры дополнительно запущены в самом Safari на невалидных тестовых данных: OAuth получает ожидаемый HTTP 400, API — HTTP 401; ошибка receiver больше не возникает. Это проверка транспорта, не успешного входа. Два regression-сценария используют настоящий browser fetch с перехваченными HTTP-ответами: callback/refresh и загрузка профиля проходят в Chromium и WebKit. Предыдущая правка AbortSignal.timeout закрыла отдельный воспроизводимый дефект, но не была причиной второй пользовательской ошибки.
 
-Автоматически начат новый OAuth в отдельной вкладке Safari; браузер показывает экран авторизации Spotify. Успешный реальный grant, звук и мутации пока не подтверждены. Нативное управление DOM Safari ограничено выключенным Allow JavaScript from Apple Events и отсутствием Accessibility; настройки безопасности не менялись. Временные диагностические файлы удалены перед публикацией.
+Успешный grant и восстановление аккаунта теперь подтверждены в Safari, SDK подключился и сообщил правильный actual URI. Для теста создан один новый приватный плейлист; create/append/read прошли, DELETE остался unknown, read-only reconciliation показывает прежний A,B,A,C. Первичная причина отказа пока не установлена. Повторная запись не выполняется. Свои обычные плейлисты до disposable пробы API не вернул (0), выборка со многими страницами проверена на fixtures. Временная диагностика удалена.
 
-Следующее действие пользователя: сохранить Developer App с redirect `http://127.0.0.1:5173/callback`, открыть локальный Jamify и пройти вход через Spotify. Не передавать Client Secret/пароль/токены.
+Вмешательство пользователя для независимых demo/session работ не требуется. Закрытие DELETE live gate и подтверждение неоднозначной идентичности остаются условиями включения production mutations.
 
-S1–S9 не начаты. В частности, свайпов, полноценного demo-mode, постоянного session store, production apply и дедупликации основного сценария пока нет. Production mutations и дальнейшая live-интеграция не объявляются готовыми до S0 live gate.
+S1 реализован локально: /demo с вымышленными плейлистами, собственным аудио, случайными карточками, keep/remove/skip/undo, preview и проверенным in-memory apply. S2 и S4–S9 не завершены; постоянное хранилище сессий S3 — следующий независимый шаг. Жесты и полноценный live apply пока отсутствуют. Production mutations и дальнейшая live-интеграция не объявляются готовыми до S0 live gate.
 
 Исходная оценка S0 в PLAN.md включала успешную живую пробу, поэтому она пока не закрыта. После входа и теста API пересчитать оставшийся бюджет, особенно при новых ограничениях Spotify; ожидание аккаунта не считать временем генерации кода. По отдельному поручению пользователя создан публичный [GitHub-репозиторий Jamify](https://github.com/Taveer09/Jamify), исходная история и исправления отправлены в `main`. Авторство коммитов проверяется через GitHub; фиктивные коммиты и изменение дат не применяются. `.env.local` и временная диагностика не опубликованы; деплой не выполнялся.
 
 
 ## Ночная работа
 
-Пользователь поручил работать до утра (ориентир 09:00 2026-11-01 Asia/Oral), выбирать модели/effort и периодически проводить ревью. Ветка `codex/night-2026-11-01`; подробные задачи и условия в OVERNIGHT.md, факты — NIGHT-LOG.md. Heartbeat jamify действительно сохранён ACTIVE с cadence 30 минут в локальном automation.toml. Main автоматически не сливается, ночная ветка может публиковаться по прежнему поручению пользователя. Следующий независимый шаг — S1 demo/contracts при открытом live gate.
+Пользователь поручил работать до утра (ориентир 09:00 2026-11-01 Asia/Oral), выбирать модели/effort и периодически проводить ревью. Ветка `codex/night-2026-11-01`; подробные задачи и условия в OVERNIGHT.md, факты — NIGHT-LOG.md. Heartbeat jamify действительно сохранён ACTIVE с cadence 30 минут в локальном automation.toml. Main автоматически не сливается, ночная ветка может публиковаться по прежнему поручению пользователя. S1 demo/contracts завершён локально и прошёл независимое Astra xhigh review с исправлениями; следующий независимый шаг — S3 session/persistence при открытом DELETE live gate.
+
+
+## S1 — демо и контракты
+
+Реализованы contracts, каноническое сравнение без UI-индексов/названий, воспроизводимый shuffle и группировка URI, preview с сохранением неподдерживаемых записей, fake gateway и read-back apply. /demo работает без Client ID и без запросов Spotify. Есть обычный, mixed, empty и 10 000-entry dataset; три собственных CC0 аудиофрагмента и обложки. Native HTML audio подтверждён browser playing event в Chromium/WebKit, seek/pause проверены.
+
+Два замечания независимого review исправлены: решения требуют прослушивания либо явного silent mode; источник аудио не путается с autoplay denial. Гонка WebKit-теста воспроизведена и устранена ожиданием завершения first-play attempt (5/5 повторов pass после фикса). S3 persistence и S4 production journal не объявляются реализованными. Demo gateway пока in-memory, после reload изменения сбрасываются.
+
+Живой протокол обновлён в API_CAPABILITIES.md; актуальная live матрица — в API_CAPABILITIES.md, история предыдущих попыток — в NIGHT-LOG.md. Основной продукт продолжает выполняться на ночной ветке, без merge/deploy.
