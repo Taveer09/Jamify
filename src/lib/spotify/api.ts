@@ -59,7 +59,7 @@ export function canonical(items: ObservedItem[]): string {
 }
 
 export class SpotifyApi {
-  constructor(private token: () => Promise<string>, private fetcher: typeof fetch = fetch) {}
+  constructor(private token: () => Promise<string>, private fetcher: typeof fetch = globalThis.fetch.bind(globalThis)) {}
 
   async request(path: string, method = 'GET', body?: unknown): Promise<unknown> {
     const url = apiUrl(path)

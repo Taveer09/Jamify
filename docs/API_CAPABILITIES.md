@@ -4,7 +4,7 @@
 
 | Возможность | Код/контрактные проверки | Живая проба |
 |---|---|---|
-| OAuth PKCE S256, state, expiry, replay protection | Реализованы; Vitest и browser regression без AbortSignal.timeout | fail: пользователь сообщил об ошибке связи при возврате; повтор после исправления ожидается |
+| OAuth PKCE S256, state, expiry, replay protection | Реализованы; Vitest, browser regression без AbortSignal.timeout, native-fetch callback/refresh в Chromium и WebKit | fail: пользователь сообщил об ошибке связи при возврате; причина receiver fetch воспроизведена в Safari и исправлена, новый grant ещё не подтверждён |
 | Refresh single-flight, logout invalidation | Реализованы; Vitest | not-run |
 | `/me` без product/email/country | Реализовано; Vitest | not-run |
 | Свои обычные плейлисты, все страницы, snapshot consistency | Реализовано; Vitest | not-run |

@@ -55,7 +55,7 @@ export class SpotifyAuth {
   private refreshing: Promise<string> | null = null
   private generation = 0
 
-  constructor({ storage, fetcher = fetch, clock = Date.now }: AuthOptions) {
+  constructor({ storage, fetcher = globalThis.fetch.bind(globalThis), clock = Date.now }: AuthOptions) {
     this.storage = storage
     this.fetcher = fetcher
     this.clock = clock

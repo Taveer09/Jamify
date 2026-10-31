@@ -1,5 +1,31 @@
 import { expect, test } from '@playwright/test'
 
+for (const mode of ['callback', 'refresh'] as const) {
+  test(`native browser fetch supports ${mode} and profile loading`, async ({ page }) => {
+    // Intercept HTTP responses, keeping the browser's native fetch implementation.
+    // Replacing window.fetch with a mock hides WebKit's Window receiver requirement.
+    await page.route('https://accounts.spotify.com/api/token', (route) => route.fulfill({
+      json: { access_token: 'fixture-access', refresh_token: 'fixture-refresh', expires_in: 3600, token_type: 'Bearer' },
+    }))
+    await page.route('https://api.spotify.com/v1/me', (route) => route.fulfill({ json: { id: 'fixture-account' } }))
+    await page.addInitScript((mode) => {
+      if (mode === 'callback') {
+        sessionStorage.setItem('jamify.oauth.transaction.v1', JSON.stringify({
+          clientId: 'a'.repeat(32), redirectUri: location.origin + '/callback',
+          state: 'fixture-state', verifier: 'A'.repeat(64), createdAt: Date.now(),
+        }))
+      } else {
+        sessionStorage.setItem('jamify.oauth.refresh.v1', JSON.stringify({
+          clientId: 'a'.repeat(32), refreshToken: 'fixture-refresh',
+        }))
+      }
+    }, mode)
+    await page.goto(mode === 'callback' ? '/callback?code=fixture-code&state=fixture-state' : '/')
+    await expect(page.getByRole('button', { name: 'Проверить мои плейлисты' })).toBeVisible()
+    await expect(page.getByRole('alert')).not.toBeVisible()
+  })
+}
+
 test('first run is honest about unverified integration and does not contact Spotify', async ({ page }) => {
   const requests: string[] = []
   page.on('request', (request) => { if (/spotify\.com|scdn\.co/.test(request.url())) requests.push(request.url()) })

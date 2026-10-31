@@ -27,7 +27,7 @@ npm run dev
 ```sh
 npm run check
 npm run test:capabilities
-npx playwright install chromium
+npx playwright install chromium webkit
 npm run test:e2e
 ```
 
