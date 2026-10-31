@@ -6,7 +6,7 @@
 
 Реализованы Vite/React/TypeScript-каркас, локальный экран подключения, PKCE/refresh, HTTP-адаптер, consistent pagination, SDK-адаптер и изолированная проба на новом приватном плейлисте. Документы перенесены из cases/playlist-swipe в docs; Client ID задан локально. Код и команды проверки существуют, дальнейшие scripts добавляются вместе с соответствующими этапами, без пустых зелёных заглушек.
 
-Проверено: typecheck, lint, production build, 55 capability tests и 26 Playwright-сценариев (Chromium и WebKit) прошли. npm audit: 0 уязвимостей; minimatch закреплён на исправленной 11.0.3 через override, lint и tests с ним проходят. Браузеры автопроверки: Chromium 156 и WebKit 27.2; viewport 390/768/1440, blocked storage, OAuth callback cleanup, account binding, клавиатура. Taste lint: 0 FAIL/0 WARN; browser inspector: 0 FAIL/1 WARN (независимые панели разной высоты, обоснование в DESIGN.md). Все итоговые снимки просмотрены.
+Проверено: typecheck, lint, production build, 58 capability tests и 32 Playwright-сценария (Chromium и WebKit) прошли. npm audit: 0 уязвимостей; minimatch закреплён на исправленной 11.0.3 через override, lint и tests с ним проходят. Браузеры автопроверки: Chromium 156 и WebKit 27.2; viewport 390/768/1440, blocked storage, OAuth callback cleanup, account binding, клавиатура. Taste lint: 0 FAIL/0 WARN; browser inspector: 0 FAIL/1 WARN (независимые панели разной высоты, обоснование в DESIGN.md). Все итоговые снимки просмотрены.
 
 Независимое ревью выявило ошибки lifecycle/account binding; подтверждённые находки исправлены и закреплены regression tests (см. S0_REVIEW.md). Живой вход/звук/мутации ещё не подтверждены — полный S0 не закрыт. Публичный доступ ограничен Development Mode; скрытие Client ID это ограничение не меняет.
 
@@ -19,3 +19,8 @@
 S1–S9 не начаты. В частности, свайпов, полноценного demo-mode, постоянного session store, production apply и дедупликации основного сценария пока нет. Production mutations и дальнейшая live-интеграция не объявляются готовыми до S0 live gate.
 
 Исходная оценка S0 в PLAN.md включала успешную живую пробу, поэтому она пока не закрыта. После входа и теста API пересчитать оставшийся бюджет, особенно при новых ограничениях Spotify; ожидание аккаунта не считать временем генерации кода. По отдельному поручению пользователя создан публичный [GitHub-репозиторий Jamify](https://github.com/Taveer09/Jamify), исходная история и исправления отправлены в `main`. Авторство коммитов проверяется через GitHub; фиктивные коммиты и изменение дат не применяются. `.env.local` и временная диагностика не опубликованы; деплой не выполнялся.
+
+
+## Ночная работа
+
+Пользователь поручил работать до утра (ориентир 09:00 2026-11-01 Asia/Oral), выбирать модели/effort и периодически проводить ревью. Ветка `codex/night-2026-11-01`; подробные задачи и условия в OVERNIGHT.md, факты — NIGHT-LOG.md. Heartbeat jamify действительно сохранён ACTIVE с cadence 30 минут в локальном automation.toml. Main автоматически не сливается, ночная ветка может публиковаться по прежнему поручению пользователя. Следующий независимый шаг — S1 demo/contracts при открытом live gate.
