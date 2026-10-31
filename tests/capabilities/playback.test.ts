@@ -36,6 +36,43 @@ describe('browser playback capability contracts', () => {
     expect(notices.at(-1)).toEqual({ state: 'playing', uri: 'spotify:track:actual' })
     player.disconnect()
   })
+  it('revokes playing evidence when the SDK loses the playback state', async () => {
+    const notices: PlayerNotice[] = []
+    const player = new BrowserPlayer(async () => 'fixture-token', (notice) => notices.push(notice))
+    await player.connect()
+    const sdk = FakePlayer.instances[0]
+    sdk.emit('player_state_changed', { paused: false, track_window: { current_track: { uri: 'fixture' } } })
+    sdk.emit('player_state_changed', null)
+    expect(notices.at(-1)).toEqual({ state: 'idle' })
+    player.disconnect()
+  })
+  it('ignores late ready after a failed connection and releases its timer', async () => {
+    vi.useFakeTimers()
+    Object.assign(window, { setTimeout, clearTimeout })
+    const connect = vi.spyOn(FakePlayer.prototype, 'connect').mockResolvedValue(true)
+    try {
+      const notices: PlayerNotice[] = []
+      const player = new BrowserPlayer(async () => 'fixture-token', (notice) => notices.push(notice))
+      const assertion = expect(player.connect()).rejects.toThrow('не подключил плеер')
+      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(20_000)
+      await assertion
+      FakePlayer.instances[0].emit('ready', { device_id: 'too-late' })
+      expect(notices).toEqual([])
+      expect(FakePlayer.instances[0].disconnect).toHaveBeenCalledTimes(1)
+      expect(vi.getTimerCount()).toBe(0)
+    } finally { connect.mockRestore(); vi.useRealTimers() }
+  })
+  it('cancels a pending connection immediately on disposal', async () => {
+    const connect = vi.spyOn(FakePlayer.prototype, 'connect').mockResolvedValue(true)
+    try {
+      const player = new BrowserPlayer(async () => 'fixture-token', vi.fn())
+      const assertion = expect(player.connect()).rejects.toThrow('отменено')
+      await Promise.resolve()
+      player.disconnect()
+      await assertion
+    } finally { connect.mockRestore() }
+  })
   it('ignores late not_ready and playback events from an old disconnected player', async () => {
     const notices: PlayerNotice[] = []
     const first = new BrowserPlayer(async () => 'fixture-token', (notice) => notices.push(notice))
