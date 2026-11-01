@@ -64,3 +64,12 @@ S6: очищенная private copy на demo gateway, keep-first в source orde
 Первый remote CI на567f432 упал:85/88 browsers pass. Исправлены зависимость keyboard test от локального Client ID и невозможность pause при loading/buffering; minimum Node22.13 согласован с ESLint. Новый CI и чистый запуск указываются в QA.md только по факту. Ночной код сохраняется в codex/night-2026-11-01, без merge main и деплоя.
 
 Полный пользовательский v1 пока НЕ готов: S0 DELETE unknown, поэтому S2 production gateway/apply не включены, S6 live copy и mobile/audio/relinking не подтверждены. Основные плейлисты не менялись, неоднозначный DELETE не повторялся.
+
+
+## Продолжение в desktop: swipe stack
+
+По новому поручению пользователя терминальный агент остановлен, его Terminal окна закрыты; работа продолжена в desktop. Добавлены next-card sleeve,160ms WAAPI exit/promotion по transform/opacity, drag feedback под обложкой, отмена pending swipe и захват прерванного exit. Клавиатура и reduced-motion переключают карточку без задержки. Решение относится только к захваченному URI; пока exit не завершён, кнопки решений временно недоступны, Undo остаётся доступен. Preview и переход к другому плейлисту завершают pending выбор перед сохранением. Save status честно показывает незавершённое решение.
+
+Исправлены регрессии первоначальной реализации: быстрые кнопки теряли выбор; уход в другой плейлист терял pending выбор. Тесты восстановления теперь ожидают видимую смену карточки, а audio regression отслеживает настоящий Audio constructor без предположения о DOM audio. Pointer re-grab проверяется в видимой части статьи после scroll.
+
+Полный check156/156, type/lint/build pass; full Chromium/WebKit108/108 pass до финальной CSS правки ширины мобильной стопки и контраста disabled кнопки. Независимое Astra high review не нашло дополнительных подтверждённых дефектов; отдельно проверило pending→navigation/preview, Undo/reload в Chromium/WebKit и старт exit с текущего drag offset. Финальные snapshots390/768/1440 просмотрены, taste0 FAIL/0 WARN, Inter загружен. Дополнительный UI suite после CSS фиксируется в QA.md. Данные/audio вымышлены; live Spotify gate не изменился, физический touch not-run.

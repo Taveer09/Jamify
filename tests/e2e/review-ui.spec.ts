@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test'
 
 declare global {
   interface Window {
+    reviewAudio: HTMLAudioElement[]
     reviewHarness: {
       events: Array<{ uri: string; decision: string }>
       undos: number
@@ -231,4 +232,119 @@ test('review demo restores the last card with keyboard undo after the session en
   await page.keyboard.press('Control+z')
   await expect(page.locator('.track-details h2')).toHaveText(last)
   await expect(page.locator('.session-progress > span')).toContainText('6 / 6')
+})
+
+// Hold only exits so assertions exercise the interval before a decision commits,
+// without relying on machine speed or extending production animation durations.
+async function holdExits(page: Page) {
+  await page.evaluate(() => {
+    const animate = Element.prototype.animate
+    Element.prototype.animate = function (frames, options) {
+      const animation = animate.call(this, frames, options)
+      if (Array.isArray(frames) && frames.at(-1)?.opacity === 0) {
+        animation.pause()
+        animation.currentTime = 40
+      }
+      return animation
+    }
+  })
+}
+
+async function startSilentReview(page: Page) {
+  await page.route('**/demo/*.wav', (route) => route.fulfill({ status: 404, body: 'missing' }))
+  await page.goto('/demo')
+  await page.getByRole('button', { name: /Начать разбор/ }).click()
+  await page.getByRole('button', { name: 'Продолжить без звука' }).click()
+  await holdExits(page)
+}
+
+test('exit stays on its track, undo cancels the first pending choice and buttons can retry', async ({ page }) => {
+  await startSilentReview(page)
+  const title = await page.locator('.track-details h2').innerText()
+  await page.getByRole('button', { name: 'Оставить', exact: true }).click()
+  await expect(page.locator('.swipe-card')).toHaveAttribute('data-exiting', 'keep')
+  await expect(page.locator('.track-details h2')).toHaveText(title)
+  await expect(page.locator('.session-progress > span')).toContainText('1 / 6')
+  await page.getByRole('button', { name: 'Отменить решение', exact: true }).click()
+  await expect(page.locator('.swipe-card')).not.toHaveAttribute('data-exiting')
+  await expect(page.locator('.track-details h2')).toHaveText(title)
+  await page.getByRole('button', { name: 'Убрать', exact: true }).click()
+  await expect(page.locator('.swipe-card')).toHaveAttribute('data-exiting', 'remove')
+  await page.locator('.track-card-motion').evaluate((node) => node.getAnimations().forEach((animation) => animation.finish()))
+  await expect(page.locator('.session-progress > span')).toContainText('2 / 6')
+  await expect(page.locator('.track-details h2')).not.toHaveText(title)
+  await expect(page.locator('.review-summary')).toContainText('Групп на удаление1')
+})
+
+test('grabbing an exiting card and pointercancel aborts the pending choice; feedback never covers art', async ({ page }) => {
+  await startSilentReview(page)
+  const title = await page.locator('.track-details h2').innerText()
+  await swipe(page, 'right')
+  await expect(page.locator('.swipe-card')).toHaveAttribute('data-exiting', 'keep')
+  // The silent-mode control may have scrolled the article partly above the viewport.
+  await page.locator('.swipe-card').evaluate((node) => node.scrollIntoView({ block: 'center' }))
+  // Grab a visible edge of the article while its child is exiting.
+  const box = (await page.locator('.swipe-card').boundingBox())!
+  await page.mouse.move(box.x + box.width - 20, box.y + 80)
+  await page.mouse.down()
+  await expect(page.locator('.swipe-card')).not.toHaveAttribute('data-exiting')
+  await page.mouse.move(box.x + box.width - 55, box.y + 80)
+  const art = (await page.locator('.album-cover').boundingBox())!
+  const feedback = (await page.locator('.swipe-feedback').boundingBox())!
+  expect(feedback.y).toBeGreaterThanOrEqual(art.y + art.height)
+  await page.locator('.swipe-card').dispatchEvent('pointercancel', { pointerId: 1 })
+  await page.mouse.up()
+  await expect(page.locator('.track-details h2')).toHaveText(title)
+  await expect(page.locator('.session-progress > span')).toContainText('1 / 6')
+  await expect(page.locator('.swipe-card')).not.toHaveAttribute('data-dragging')
+  await bodyFocus(page)
+  await page.keyboard.press('ArrowRight')
+  await expect(page.locator('.session-progress > span')).toContainText('2 / 6')
+  await expect(page.locator('.swipe-card')).not.toHaveAttribute('data-exiting')
+})
+
+test('a replacement or disabled card invalidates a deferred exit', async ({ page }) => {
+  await mountComponents(page)
+  await holdExits(page)
+  await swipe(page, 'left')
+  await expect(page.locator('.swipe-card')).toHaveAttribute('data-exiting', 'remove')
+  await page.evaluate(() => window.reviewHarness.update({ index: 5 }))
+  await expect(page.locator('.track-details h2')).toHaveText('Трек 5')
+  expect(await page.evaluate(() => window.reviewHarness.events)).toEqual([])
+  await swipe(page, 'right')
+  await page.evaluate(() => window.reviewHarness.update({ disabled: true }))
+  await expect(page.locator('.swipe-card')).not.toHaveAttribute('data-exiting')
+  expect(await page.evaluate(() => window.reviewHarness.events)).toEqual([])
+})
+
+test('real local audio remains bound through exit, next-card loading and undo', async ({ page }) => {
+  const spotifyRequests: string[] = []
+  await page.route(/https:\/\/.*spotify\.com\//, (route) => { spotifyRequests.push(route.request().url()); return route.abort() })
+  await page.addInitScript(() => {
+    window.reviewAudio = []
+    const NativeAudio = window.Audio
+    window.Audio = class extends NativeAudio {
+      constructor(src?: string) { super(src); window.reviewAudio.push(this) }
+    }
+  })
+  await page.goto('/demo')
+  await page.getByRole('button', { name: /Начать разбор/ }).click()
+  await expect(page.getByRole('status')).toContainText(/Играет текущий трек|Нажми.*Слушать/)
+  if ((await page.getByRole('status').innerText()).includes('Нажми')) await page.getByRole('button', { name: 'Слушать', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('Играет текущий трек')
+  const original = await page.locator('.track-details h2').innerText()
+  const source = await page.evaluate(() => window.reviewAudio.at(-1)!.src)
+  await holdExits(page)
+  await page.getByRole('button', { name: 'Убрать', exact: true }).click()
+  await expect(page.locator('.track-details h2')).toHaveText(original)
+  await expect.poll(() => page.evaluate(() => window.reviewAudio.at(-1)!.src)).toBe(source)
+  await page.locator('.track-card-motion').evaluate((node) => node.getAnimations().forEach((animation) => animation.finish()))
+  await expect(page.locator('.track-details h2')).not.toHaveText(original)
+  await expect(page.getByRole('status')).toContainText('Играет текущий трек')
+  expect(await page.evaluate(() => { const audio = window.reviewAudio.at(-1)!; return !audio.paused && audio.currentTime >= 0 })).toBe(true)
+  await page.getByRole('button', { name: 'Отменить решение', exact: true }).click()
+  await expect(page.locator('.track-details h2')).toHaveText(original)
+  await expect.poll(() => page.evaluate(() => window.reviewAudio.at(-1)!.src)).toBe(source)
+  await expect(page.getByRole('status')).toContainText('Играет текущий трек')
+  expect(spotifyRequests).toEqual([])
 })
