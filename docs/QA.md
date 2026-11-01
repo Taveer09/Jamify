@@ -41,3 +41,14 @@
 Первый реальный GitHub run на567f432: [CI#1](https://github.com/Taveer09/Jamify/actions/runs/41264158056) — fail,85/88 browser pass. Type/lint/unit/build прошли. Подтверждены две проблемы: keyboard test полагался на локальный Client ID; после seek/buffering кнопка не позволяла остановить ещё активное аудио, пока не пришёл новый playing event. Тест теперь сам настраивает fixture Client ID с клавиатуры, плеер допускает pause при loading без выдачи playing подтверждения. Отдельный stalled-audio regression и setup/demo/copy46/46 локально pass. Минимальный Node поднят с22.12 до22.13 из-за фактического engines ESLint; это не выдаётся за причину всех browser failures.
 
 Новый удалённый CI и clean install должны быть подтверждены на сохранённом итоговом commit; полный локальный suite98/98 плюс large-copy2/2 pass. Production deploy не выполнялся.
+
+
+## Desktop swipe continuation
+
+- Full check156/156 unit + type/lint/build pass; full Playwright108/108 pass.
+- Added real Audio instance instrumentation verifies old track through exit, next audio selection and Undo, with0 Spotify calls. Held animations exercise interrupt/Undo/disabled/stale props without speed-dependent sleeps.
+- Fixed pending button/navigation/save status regressions. Session persistence waits for visible card promotion before capturing the next title.
+- Independent Astra reviewer: pending navigation commits once, preview includes pending removal, Undo/reload restore correct decisions, drag exit starts at captured offset; no additional confirmed issue.
+- Final390/768/1440 screenshots reviewed; taste measurements0FAIL/0WARN after CSS alignment/contrast polish. Headless browser checks do not prove physical touch/live Spotify/audio audibility.
+
+Final CSS check: npm run check156/156 pass; targeted review-ui Chromium/WebKit32/32 pass after mobile stack and disabled contrast polish.
