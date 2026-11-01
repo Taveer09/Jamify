@@ -87,3 +87,18 @@ test('audio failure requires an explicit choice before keep/remove becomes avail
   await page.getByRole('button', { name: 'Убрать', exact: false }).click()
   await expect(page.getByText('Режим без звука включён для этой сессии.')).toBeVisible()
 })
+
+test('a loading audio request can be paused before playback is confirmed', async ({ page }) => {
+  let release!: () => void
+  const held = new Promise<void>((resolve) => { release = resolve })
+  await page.route('**/demo/*.wav', async (route) => { await held; await route.continue() })
+  await page.goto('/demo')
+  await page.getByRole('button', { name: /Начать разбор/ }).click()
+  await expect(page.getByRole('status')).toContainText('Загружаем звук')
+  await expect(page.getByRole('button', { name: 'Убрать', exact: false })).toBeDisabled()
+  await page.getByRole('button', { name: 'Пауза', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('Звук на паузе')
+  release()
+  await expect(page.getByRole('button', { name: 'Слушать', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Убрать', exact: false })).toBeDisabled()
+})

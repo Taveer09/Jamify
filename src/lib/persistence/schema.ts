@@ -21,16 +21,41 @@ const plan = z.object({
   mode: z.enum(['remove-uri-groups', 'create-clean-copy']), removeUris: z.array(z.string()).max(10_000), expectedOrderedEntries: z.array(entry).max(10_000),
   expectedCanonical: z.array(canonical).max(10_000), removedOccurrences: z.number().int().nonnegative(), blockedReasons: z.array(z.string()),
   draftRevision: z.number().int().positive().nullable(), runId: z.string().nullable(),
+}).superRefine((value, context) => {
+  if (fingerprint(value.expectedOrderedEntries) !== JSON.stringify(value.expectedCanonical) || new Set(value.removeUris).size !== value.removeUris.length ||
+    (value.mode === 'create-clean-copy' && value.expectedOrderedEntries.some((item) => !item.sourceUri || !item.canCopy || item.identityConfidence !== 'confirmed' || (item.kind !== 'track' && item.kind !== 'episode')))) {
+    context.addIssue({ code: 'custom', message: 'Содержимое плана не соответствует каноническому результату.' })
+  }
 })
 export const journalSchema = z.object({
   schemaVersion: z.literal(1), operationId: z.string(), accountId: z.string(), sourcePlaylistId: z.string(), plan,
   state: z.enum(['idle', 'preflight', 'applying', 'reconciling', 'complete', 'conflict', 'partial', 'unknown']),
   confirmedPrefix: z.number().int().nonnegative(),
   pendingBatch: z.object({ uris: z.array(z.string()).max(100), snapshotId: z.string(), before: z.array(canonical).max(10_000), after: z.array(canonical).max(10_000) }).nullable(),
+  targetPlaylistId: z.string().min(1).nullable().default(null), pendingCreate: z.boolean().default(false),
   sessionFinalized: z.boolean(), revision: z.number().int().positive(), updatedAt: z.number(), message: z.string(), expectedSnapshotId: z.string(), retryAt: z.number().nullable(),
 }).superRefine((journal, context) => {
+  const copy = journal.plan.mode === 'create-clean-copy'
+  const pending = journal.pendingBatch
+  if (pending) {
+    const expectedUris = copy ? journal.plan.expectedOrderedEntries.slice(journal.confirmedPrefix, journal.confirmedPrefix + pending.uris.length).map((entry) => entry.sourceUri)
+      : journal.plan.removeUris.slice(journal.confirmedPrefix, journal.confirmedPrefix + pending.uris.length)
+    const after = copy ? journal.plan.expectedCanonical.slice(0, journal.confirmedPrefix + pending.uris.length)
+      : pending.before.filter((item) => !item.identity || !pending.uris.includes(item.identity))
+    if (!pending.uris.length || JSON.stringify(pending.uris) !== JSON.stringify(expectedUris) || pending.snapshotId !== journal.expectedSnapshotId ||
+      JSON.stringify(pending.after) !== JSON.stringify(after) ||
+      (copy && JSON.stringify(pending.before) !== JSON.stringify(journal.plan.expectedCanonical.slice(0, journal.confirmedPrefix)))) {
+      context.addIssue({ code: 'custom', message: 'Ожидающий пакет не соответствует подтверждённому префиксу плана.' })
+    }
+  }
   if (journal.operationId !== journal.plan.operationId || journal.accountId !== journal.plan.accountId || journal.sourcePlaylistId !== journal.plan.playlistId ||
-    journal.confirmedPrefix > journal.plan.removeUris.length || ((journal.state === 'complete') !== journal.sessionFinalized)) {
+    journal.confirmedPrefix > (journal.plan.mode === 'create-clean-copy' ? journal.plan.expectedCanonical.length : journal.plan.removeUris.length) ||
+    ((journal.state === 'complete') !== journal.sessionFinalized) ||
+    (journal.plan.mode === 'remove-uri-groups' && (journal.targetPlaylistId !== null || journal.pendingCreate)) ||
+    (journal.targetPlaylistId !== null && (journal.targetPlaylistId === journal.sourcePlaylistId || journal.pendingCreate)) ||
+    (copy && ((journal.pendingBatch !== null && !journal.targetPlaylistId) || (journal.confirmedPrefix > 0 && !journal.targetPlaylistId) ||
+      (journal.pendingCreate && (journal.confirmedPrefix !== 0 || journal.pendingBatch !== null)) ||
+      (journal.sessionFinalized && (!journal.targetPlaylistId || journal.pendingCreate))))) {
     context.addIssue({ code: 'custom', message: 'Журнал операции не соответствует плану.' })
   }
 })

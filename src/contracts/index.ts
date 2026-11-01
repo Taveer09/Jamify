@@ -37,12 +37,13 @@ export type ApplyPlan = {
   draftRevision: number | null; runId: string | null
 }
 export type ApplyState = 'idle' | 'preflight' | 'applying' | 'reconciling' | 'complete' | 'conflict' | 'partial' | 'unknown'
-export type ApplyResult = { state: ApplyState; baseline?: Baseline; message: string; targetPlaylistId?: string; session?: ReviewSession; draftRevision?: number }
+export type ApplyResult = { state: ApplyState; baseline?: Baseline; targetBaseline?: Baseline; message: string; targetPlaylistId?: string; session?: ReviewSession; draftRevision?: number }
 export type MutationJournal = {
   schemaVersion: 1; operationId: string; accountId: string; sourcePlaylistId: string
   plan: ApplyPlan; state: ApplyState; confirmedPrefix: number
   pendingBatch: { uris: string[]; snapshotId: string; before: CanonicalItem[]; after: CanonicalItem[] } | null
   sessionFinalized: boolean; revision: number; updatedAt: number; message: string
+  targetPlaylistId: string | null; pendingCreate: boolean
   expectedSnapshotId: string
   retryAt: number | null
 }

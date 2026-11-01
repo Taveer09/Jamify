@@ -41,6 +41,7 @@ export class DemoPlaylistGateway implements PlaylistGateway {
     return id
   }
   async appendItems(playlistId: string, uris: string[]): Promise<void> {
+    if (!uris.length || uris.length > 100) throw new Error('Пакет копии должен содержать от 1 до 100 записей.')
     const baseline = await this.loadBaseline(playlistId)
     const known = (this.storage ? await this.storage.listDemoLibrary() : [...this.playlists.values()]).flatMap((b) => b.orderedEntries)
     const entries = uris.map((uri) => {

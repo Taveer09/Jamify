@@ -1,6 +1,7 @@
 import type { ApplyCoordinator, ApplyPlan, ApplyResult, Baseline, CanonicalItem, MutationJournal, PlaylistGateway } from '../../contracts'
-import { canonicalEntries } from '../../domain/playlist'
+import { buildApplyPlan, canonicalEntries } from '../../domain/playlist'
 import type { JamifyStorage } from '../../lib/persistence/database'
+import { DurableCopyExecutor } from './copy'
 
 export type ExclusiveLock = <T>(name: string, job: () => Promise<T>) => Promise<T>
 export const browserApplyLock: ExclusiveLock = async (name, job) => {
@@ -23,7 +24,8 @@ function definiteRejection(error: unknown): boolean {
 }
 export class DurableApplyCoordinator implements ApplyCoordinator {
   private running = new Map<string, Promise<ApplyResult>>()
-  constructor(private gateway: PlaylistGateway, private storage: JamifyStorage, private lock: ExclusiveLock = browserApplyLock, private clock = () => Date.now()) {}
+  private copy: DurableCopyExecutor
+  constructor(private gateway: PlaylistGateway, private storage: JamifyStorage, private lock: ExclusiveLock = browserApplyLock, private clock = () => Date.now()) { this.copy = new DurableCopyExecutor(gateway, storage, clock) }
   apply(plan: ApplyPlan): Promise<ApplyResult> { return this.dispatch(plan.accountId, plan.playlistId, plan.operationId, () => this.start(plan)) }
   recover(accountId: string, playlistId: string): Promise<ApplyResult> {
     return this.dispatch(accountId, playlistId, 'recovery', async () => {
@@ -38,7 +40,7 @@ export class DurableApplyCoordinator implements ApplyCoordinator {
       if (!journal) return { state: 'conflict', message: 'Операция не найдена.' }
       if (journal.retryAt && this.clock() < journal.retryAt) return this.retryWait(journal)
       // Unknown pending writes are reconciled, never sent again.
-      if (journal.pendingBatch || journal.sessionFinalized) return this.reconcile(journal)
+      if (journal.pendingBatch || journal.pendingCreate || journal.sessionFinalized) return this.reconcile(journal)
       return this.execute(journal)
     })
   }
@@ -62,18 +64,31 @@ export class DurableApplyCoordinator implements ApplyCoordinator {
     return baseline
   }
   private async start(plan: ApplyPlan): Promise<ApplyResult> {
-    if (plan.mode !== 'remove-uri-groups') return { state: 'conflict', message: 'Создание очищенной копии ещё не подключено.' }
     if (plan.blockedReasons.length) return { state: 'conflict', message: plan.blockedReasons.join(' ') }
     const existing = await this.storage.operations.read(plan.accountId, plan.playlistId)
     if (existing?.retryAt && this.clock() < existing.retryAt) return this.retryWait(existing)
     if (existing && existing.operationId === plan.operationId) return this.reconcile(existing)
     if (existing && !existing.sessionFinalized) return { state: existing.state, message: 'Сначала проверь результат предыдущей операции.' }
-    await this.account(plan.accountId)
-    const before = await this.gateway.loadBaseline(plan.playlistId)
+    let before: Baseline
+    try {
+      await this.account(plan.accountId)
+      before = await this.gateway.loadBaseline(plan.playlistId)
+    } catch (error) {
+      if (plan.mode === 'create-clean-copy' && error && typeof error === 'object' && 'status' in error && Number(error.status) === 429) {
+        // Persist even a preflight read's Retry-After. Reload and another click
+        // must not bypass the same server-requested delay.
+        return this.copy.defer(await this.storage.operations.begin(plan), error)
+      }
+      throw error
+    }
     if (before.accountId !== plan.accountId || before.playlistId !== plan.playlistId || before.snapshotId !== plan.snapshotId || before.fingerprint !== plan.baselineFingerprint) {
       return { state: 'conflict', message: 'Плейлист изменился после предпросмотра. Новая запись не выполнялась.' }
     }
     if (!removable(before, plan.removeUris)) return { state: 'conflict', message: 'Идентичность выбранных треков больше не подтверждена. Удаление заблокировано.' }
+    if (plan.mode === 'create-clean-copy') {
+      const fresh = buildApplyPlan(before, Object.fromEntries(plan.removeUris.map((uri) => [uri, 'remove' as const])), plan.mode, plan.operationId)
+      if (fresh.blockedReasons.length || !equal(fresh.expectedCanonical, plan.expectedCanonical)) return { state: 'conflict', message: 'Сохраняемые записи нельзя безопасно скопировать. Обнови предпросмотр.' }
+    }
     const journal = await this.storage.operations.begin(plan)
     return this.execute(journal)
   }
@@ -82,6 +97,8 @@ export class DurableApplyCoordinator implements ApplyCoordinator {
     return { state, message }
   }
   private async reconcile(journal: MutationJournal): Promise<ApplyResult> {
+    await this.storage.operations.validateFrozenPlan(journal)
+    if (journal.plan.mode === 'create-clean-copy') return this.copy.run(journal, 'reconcile')
     if (journal.retryAt && this.clock() < journal.retryAt) return this.retryWait(journal)
     const observed = await this.read(journal)
     const actual = canonicalEntries(observed.orderedEntries)
@@ -109,6 +126,8 @@ export class DurableApplyCoordinator implements ApplyCoordinator {
     return this.stop(journal, 'partial', 'Подтверждена только часть изменений. Продолжение требует отдельного действия.')
   }
   private async execute(journal: MutationJournal): Promise<ApplyResult> {
+    await this.storage.operations.validateFrozenPlan(journal)
+    if (journal.plan.mode === 'create-clean-copy') return this.copy.run(journal, 'execute')
     if (journal.pendingBatch) return this.reconcile(journal)
     while (journal.confirmedPrefix < journal.plan.removeUris.length) {
       const before = await this.read(journal)
