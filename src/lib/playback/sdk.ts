@@ -17,7 +17,7 @@ declare global {
     onSpotifyWebPlaybackSDKReady?: () => void
   }
 }
-export type PlayerNotice = { state: 'idle' | 'ready' | 'playing' | 'paused' | 'error'; uri?: string; message?: string }
+export type PlayerNotice = { state: 'idle' | 'ready' | 'playing' | 'paused' | 'error'; uri?: string; message?: string; positionMs?: number; durationMs?: number }
 let sdkPromise: Promise<Sdk> | null = null
 
 function loadSdk(): Promise<Sdk> {
@@ -88,8 +88,8 @@ export class BrowserPlayer {
       }
       player.addListener('player_state_changed', (value) => {
         if (this.disposed) return
-        const data = z.object({ paused: z.boolean(), track_window: z.object({ current_track: z.object({ uri: z.string() }) }) }).safeParse(value)
-        if (data.success) this.notify({ state: data.data.paused ? 'paused' : 'playing', uri: data.data.track_window.current_track.uri })
+        const data = z.object({ paused: z.boolean(), position: z.number().optional(), duration: z.number().optional(), track_window: z.object({ current_track: z.object({ uri: z.string() }) }) }).safeParse(value)
+        if (data.success) this.notify({ state: data.data.paused ? 'paused' : 'playing', uri: data.data.track_window.current_track.uri, ...(data.data.position === undefined ? {} : { positionMs: data.data.position }), ...(data.data.duration === undefined ? {} : { durationMs: data.data.duration }) })
         else this.notify({ state: 'idle' })
       })
       void player.connect().then((connected) => {
@@ -97,6 +97,8 @@ export class BrowserPlayer {
       }).catch((error: unknown) => { window.clearTimeout(timer); reject(error) })
     }).catch((error: unknown) => { this.disconnect(); throw error })
   }
+
+  activate(): Promise<void> { return this.player?.activateElement() ?? Promise.resolve() }
 
   async play(uri: string, api: SpotifyApi): Promise<void> {
     if (!this.player || !this.deviceId) throw new Error('Сначала подключи плеер.')

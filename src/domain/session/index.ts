@@ -1,7 +1,8 @@
 import type { Baseline, Decision, ReviewSession } from '../../contracts'
 import { shuffled, uniqueReviewEntries } from '../playlist'
 
-export const SESSION_SIZE = 25
+// All supported entries remain reviewable in one uninterrupted queue.
+export const SESSION_SIZE = 10_000
 export function createSession(baseline: Baseline, seed: number, runId = crypto.randomUUID()): ReviewSession {
   return {
     schemaVersion: 1, accountId: baseline.accountId, playlistId: baseline.playlistId, runId,

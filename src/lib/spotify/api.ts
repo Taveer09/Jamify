@@ -11,6 +11,7 @@ export type SpotifyPlaylist = z.infer<typeof playlistSchema>
 export type ObservedItem = {
   uri: string | null; kind: 'track' | 'episode' | 'unknown'; isLocal: boolean;
   title: string; linkedFromUri: string | null;
+  artist?: string; imageUrl?: string | null; durationMs?: number | null; canPlay?: boolean; spotifyUrl?: string | null;
 }
 export type PlaylistSnapshot = { playlist: SpotifyPlaylist; items: ObservedItem[] }
 
@@ -39,11 +40,21 @@ export function apiUrl(path: string): string {
   return url.href
 }
 
+function safeHttps(value?: string): string | null { return value?.startsWith('https://') ? value : null }
+
+export type LibraryPlaylist = { id: string; name: string; ownerId: string; collaborative: boolean; imageUrl: string | null; count: number | null; readable: boolean }
+
 export function parseObservedItem(value: unknown): ObservedItem {
   const envelope = z.record(z.string(), z.unknown()).parse(value)
   const raw = Object.hasOwn(envelope, 'item') ? envelope.item : envelope.track
   const item = z.object({
     uri: z.string().nullable().optional(), type: z.string().optional(), name: z.string().optional(),
+    artists: z.array(z.object({ name: z.string() })).optional(),
+    album: z.object({ images: z.array(z.object({ url: z.string() })).optional() }).optional(),
+    images: z.array(z.object({ url: z.string() })).optional(),
+    duration_ms: z.number().nonnegative().optional(), is_playable: z.boolean().optional(),
+    restrictions: z.object({ reason: z.string() }).optional(),
+    external_urls: z.object({ spotify: z.string() }).optional(),
     is_local: z.boolean().optional(), linked_from: z.object({ uri: z.string() }).optional(),
   }).nullable().parse(raw ?? null)
   return {
@@ -51,6 +62,11 @@ export function parseObservedItem(value: unknown): ObservedItem {
     kind: item?.type === 'track' || item?.type === 'episode' ? item.type : 'unknown',
     isLocal: Boolean(envelope.is_local || item?.is_local), title: item?.name ?? 'Недоступная запись',
     linkedFromUri: item?.linked_from?.uri ?? null,
+    artist: item?.artists?.map((artist) => artist.name).join(', ') || '',
+    imageUrl: safeHttps(item?.album?.images?.[0]?.url ?? item?.images?.[0]?.url),
+    durationMs: item?.duration_ms ?? null,
+    canPlay: Boolean(item?.uri && item.type === 'track' && !envelope.is_local && !item.is_local && item.is_playable !== false && !item.restrictions),
+    spotifyUrl: item?.external_urls?.spotify?.startsWith('https://open.spotify.com/') ? item.external_urls.spotify : null,
   }
 }
 
@@ -114,6 +130,36 @@ export class SpotifyApi {
     const summaries = await this.collect('me/playlists?limit=50')
     return summaries.map((raw) => z.object({ id: z.string(), name: z.string(), owner: ownerSchema, collaborative: z.boolean() }).parse(raw))
       .filter((p) => p.owner.id === accountId && !p.collaborative)
+  }
+
+  async libraryPlaylists(accountId: string): Promise<LibraryPlaylist[]> {
+    const rows = await this.collect('me/playlists?limit=50')
+    return rows.map((raw) => {
+      const p = z.object({ id: z.string(), name: z.string(), owner: ownerSchema,
+        collaborative: z.boolean(), images: z.array(z.object({ url: z.string() })).nullable().optional(),
+        items: z.object({ total: z.number().int().nonnegative() }).optional(),
+        tracks: z.object({ total: z.number().int().nonnegative() }).optional(),
+      }).parse(raw)
+      return { id: p.id, name: p.name, ownerId: p.owner.id, collaborative: p.collaborative,
+        imageUrl: safeHttps(p.images?.[0]?.url), count: p.items?.total ?? p.tracks?.total ?? null,
+        readable: p.owner.id === accountId || p.collaborative }
+    })
+  }
+
+  async reviewSnapshot(id: string, accountId: string): Promise<PlaylistSnapshot> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const before = await this.playlist(id)
+      if (before.owner.id !== accountId && !before.collaborative) throw new Error('Spotify разрешает читать треки только в своих и совместных плейлистах. Этот плейлист виден в медиатеке, но его треки недоступны приложению.')
+      const items = (await this.collect(`playlists/${encodeURIComponent(id)}/items?limit=50&additional_types=track,episode`)).map(parseObservedItem)
+      const after = await this.playlist(id)
+      if (after.owner.id !== accountId && !after.collaborative) throw new Error('Доступ к плейлисту изменился.')
+      if (before.snapshot_id === after.snapshot_id) return { playlist: after, items }
+    }
+    throw new Error('Плейлист меняется во время загрузки. Попробуй ещё раз.')
+  }
+
+  async savedTracks(): Promise<ObservedItem[]> {
+    return (await this.collect('me/tracks?limit=50')).map(parseObservedItem)
   }
 
   async playlist(id: string): Promise<SpotifyPlaylist> {

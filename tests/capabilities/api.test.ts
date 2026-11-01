@@ -74,4 +74,26 @@ describe('Spotify API capability contracts', () => {
       .rejects.toMatchObject({ status: 429, retryAfter: 12 })
     expect(fetcher).toHaveBeenCalledTimes(1)
   })
+  it('shows followed and collaborative lists without weakening the mutation probe owner gate', async () => {
+    const fetcher=vi.fn<typeof fetch>().mockResolvedValue(json({items:[meta,{...meta,id:'followed',owner:{id:'other'}},{...meta,id:'collab',owner:{id:'other'},collaborative:true}],next:null,total:3}))
+    const lists=await new SpotifyApi(async ()=>'fixture',fetcher).libraryPlaylists('account')
+    expect(lists.map(p=>[p.id,p.readable])).toEqual([['playlist',true],['followed',false],['collab',true]])
+  })
+  it('paginates all saved tracks and preserves artist, artwork and unavailable entries',async()=>{
+    const fetcher=vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(json({items:[{track:{type:'track',uri:'A',name:'First',artists:[{name:'Artist'}],album:{images:[{url:'https://fixture.example/art.jpg'}]},duration_ms:123000}}],next:'https://api.spotify.com/v1/me/tracks?offset=1',total:2}))
+      .mockResolvedValueOnce(json({items:[{track:null}],next:null,total:2}))
+    const items=await new SpotifyApi(async ()=>'fixture',fetcher).savedTracks()
+    expect(items[0]).toMatchObject({uri:'A',artist:'Artist',imageUrl:'https://fixture.example/art.jpg',durationMs:123000,canPlay:true})
+    expect(items[1]).toMatchObject({uri:null,canPlay:false});expect(fetcher).toHaveBeenCalledTimes(2)
+  })
+  it('allows additive collaborative read but refuses followed items before fetching them',async()=>{
+    const collaborative={...meta,collaborative:true,owner:{id:'other'}}
+    const fetcher=vi.fn<typeof fetch>().mockResolvedValueOnce(json(collaborative)).mockResolvedValueOnce(json({items:[],next:null,total:0})).mockResolvedValueOnce(json(collaborative))
+    expect((await new SpotifyApi(async ()=>'fixture',fetcher).reviewSnapshot('playlist','account')).items).toEqual([])
+    const followed=vi.fn<typeof fetch>().mockResolvedValue(json({...meta,owner:{id:'other'}}))
+    await expect(new SpotifyApi(async ()=>'fixture',followed).reviewSnapshot('playlist','account')).rejects.toThrow('совместных')
+    expect(followed).toHaveBeenCalledTimes(1)
+  })
+
 })
