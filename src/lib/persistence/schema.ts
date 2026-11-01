@@ -15,6 +15,25 @@ export const baselineSchema = z.object({
   orderedEntries: z.array(entry).max(10_000), fingerprint: z.string(),
 }).refine((value) => value.fingerprint === fingerprint(value.orderedEntries), 'Несогласованное содержимое плейлиста.')
 const decision = z.enum(['keep', 'remove', 'skip'])
+const canonical = z.object({ kind: z.enum(['track', 'episode', 'local', 'unavailable']), identity: nullableText, visibility: z.enum(['identified', 'opaque']) })
+const plan = z.object({
+  operationId: z.string(), accountId: z.string(), playlistId: z.string(), playlistName: z.string(), baselineFingerprint: z.string(), snapshotId: z.string(),
+  mode: z.enum(['remove-uri-groups', 'create-clean-copy']), removeUris: z.array(z.string()).max(10_000), expectedOrderedEntries: z.array(entry).max(10_000),
+  expectedCanonical: z.array(canonical).max(10_000), removedOccurrences: z.number().int().nonnegative(), blockedReasons: z.array(z.string()),
+  draftRevision: z.number().int().positive().nullable(), runId: z.string().nullable(),
+})
+export const journalSchema = z.object({
+  schemaVersion: z.literal(1), operationId: z.string(), accountId: z.string(), sourcePlaylistId: z.string(), plan,
+  state: z.enum(['idle', 'preflight', 'applying', 'reconciling', 'complete', 'conflict', 'partial', 'unknown']),
+  confirmedPrefix: z.number().int().nonnegative(),
+  pendingBatch: z.object({ uris: z.array(z.string()).max(100), snapshotId: z.string(), before: z.array(canonical).max(10_000), after: z.array(canonical).max(10_000) }).nullable(),
+  sessionFinalized: z.boolean(), revision: z.number().int().positive(), updatedAt: z.number(), message: z.string(), expectedSnapshotId: z.string(), retryAt: z.number().nullable(),
+}).superRefine((journal, context) => {
+  if (journal.operationId !== journal.plan.operationId || journal.accountId !== journal.plan.accountId || journal.sourcePlaylistId !== journal.plan.playlistId ||
+    journal.confirmedPrefix > journal.plan.removeUris.length || ((journal.state === 'complete') !== journal.sessionFinalized)) {
+    context.addIssue({ code: 'custom', message: 'Журнал операции не соответствует плану.' })
+  }
+})
 export const sessionSchema = z.object({
   schemaVersion: z.literal(1), accountId: z.string(), playlistId: z.string(), runId: z.string(),
   reviewedUris: z.array(z.string()).max(10_000), baselineSnapshotId: z.string(), baselineFingerprint: z.string(),

@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test'
 
 test('demo reviews random URI groups, undoes decisions and applies only after preview without Spotify', async ({ page }) => {
   const spotify: string[] = []
+  const pageErrors: string[] = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
   page.on('request', (request) => { if (/spotify\.com|scdn\.co/.test(request.url())) spotify.push(request.url()) })
   await page.goto('/demo')
   await page.getByRole('button', { name: /Начать разбор/ }).click()
@@ -24,6 +26,7 @@ test('demo reviews random URI groups, undoes decisions and applies only after pr
   await page.getByRole('button', { name: 'Вернуться к плейлистам' }).click()
   await expect(page.getByRole('button', { name: /Ночная прогулка/ })).toContainText(`${remaining} записей`)
   expect(spotify).toEqual([])
+  expect(pageErrors).toEqual([])
 })
 
 test('demo plays the local audio, supports seeking and pauses before leaving the card', async ({ page }) => {

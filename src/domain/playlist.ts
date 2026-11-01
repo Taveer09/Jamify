@@ -32,7 +32,7 @@ export function shuffled<T>(items: readonly T[], seed: number): T[] {
   }
   return result
 }
-export function buildApplyPlan(baseline: Baseline, decisions: Record<string, Decision>, mode: ApplyPlan['mode'], operationId = crypto.randomUUID()): ApplyPlan {
+export function buildApplyPlan(baseline: Baseline, decisions: Record<string, Decision>, mode: ApplyPlan['mode'], operationId: string = crypto.randomUUID()): ApplyPlan {
   const blockedReasons = new Set<string>()
   const groups = new Map<string, Entry[]>()
   for (const entry of baseline.orderedEntries) {
@@ -67,5 +67,6 @@ export function buildApplyPlan(baseline: Baseline, decisions: Record<string, Dec
     baselineFingerprint: baseline.fingerprint, snapshotId: baseline.snapshotId, mode, removeUris,
     expectedOrderedEntries: kept, expectedCanonical: canonicalEntries(kept),
     removedOccurrences: baseline.orderedEntries.length - kept.length, blockedReasons: [...blockedReasons],
+    draftRevision: null, runId: null,
   }
 }

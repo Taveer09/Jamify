@@ -1,50 +1,64 @@
 import { openDB } from 'idb'
 import type { DBSchema, IDBPDatabase } from 'idb'
-import type { Baseline, ReviewSession } from '../../contracts'
+import type { Baseline, MutationJournal, ReviewSession } from '../../contracts'
 import { finalizeSession } from '../../domain/session'
-import { baselineSchema, draftSchema } from './schema'
+import { baselineSchema, draftSchema, journalSchema } from './schema'
+import { OperationStorage } from './operations'
 import type { StoredDraft } from './schema'
 
-interface JamifyDatabase extends DBSchema {
+export interface JamifyDatabase extends DBSchema {
   drafts: { key: [string, string]; value: StoredDraft }
   'demo-playlists': { key: [string, string]; value: Baseline }
+  operations: { key: [string, string]; value: MutationJournal }
 }
 export class DraftConflictError extends Error {
-  constructor() { super('Черновик изменён в другой вкладке. Обнови страницу перед продолжением.'); this.name = 'DraftConflictError' }
+  constructor(message = 'Черновик изменён в другой вкладке. Обнови страницу перед продолжением.') { super(message); this.name = 'DraftConflictError' }
 }
 const TTL = 30 * 24 * 60 * 60_000
 export class JamifyStorage {
   private database: Promise<IDBPDatabase<JamifyDatabase>> | null = null
+  readonly operations = new OperationStorage(() => this.db(), () => this.clock())
   constructor(private name = 'jamify.v1', private clock = Date.now) {}
   private db() {
-    if (!this.database) this.database = openDB<JamifyDatabase>(this.name, 1, {
-      upgrade(db) { db.createObjectStore('drafts'); db.createObjectStore('demo-playlists') },
+    if (!this.database) this.database = openDB<JamifyDatabase>(this.name, 2, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains('drafts')) db.createObjectStore('drafts')
+        if (!db.objectStoreNames.contains('demo-playlists')) db.createObjectStore('demo-playlists')
+        if (!db.objectStoreNames.contains('operations')) db.createObjectStore('operations')
+      },
       blocking: () => { void this.close() },
     }).catch((error: unknown) => { this.database = null; throw error })
     return this.database
   }
   async loadDraft(accountId: string, playlistId: string): Promise<StoredDraft | null> {
     const db = await this.db()
-    const transaction = db.transaction('drafts', 'readwrite')
+    const transaction = db.transaction(['drafts', 'operations'], 'readwrite')
+    const store = transaction.objectStore('drafts')
     const key: [string, string] = [accountId, playlistId]
-    const raw = await transaction.store.get(key)
+    const raw = await store.get(key)
     if (!raw) { await transaction.done; return null }
     const parsed = draftSchema.safeParse(raw)
     if (!parsed.success || raw.baseline.accountId !== accountId || raw.baseline.playlistId !== playlistId) {
       await transaction.done
       throw new Error('Сохранённый черновик повреждён. Очисти локальные данные для этого аккаунта.')
     }
-    if (Math.max(0, this.clock() - raw.updatedAt) > TTL) {
-      await transaction.store.delete(key); await transaction.done; return null
+    const operation = await transaction.objectStore('operations').get(key)
+    if (Math.max(0, this.clock() - raw.updatedAt) > TTL && (!operation || journalSchema.parse(operation).sessionFinalized)) {
+      await store.delete(key); await transaction.done; return null
     }
     await transaction.done
     return parsed.data
   }
   async saveDraft(baseline: Baseline, session: ReviewSession, expectedRevision: number | null, expectedRunId = session.runId): Promise<StoredDraft> {
     const db = await this.db()
-    const transaction = db.transaction('drafts', 'readwrite')
+    const transaction = db.transaction(['drafts', 'operations'], 'readwrite')
+    const store = transaction.objectStore('drafts')
     const key: [string, string] = [baseline.accountId, baseline.playlistId]
-    const raw = await transaction.store.get(key)
+    const operation = await transaction.objectStore('operations').get(key)
+    if (operation && !journalSchema.parse(operation).sessionFinalized) {
+      transaction.abort(); await transaction.done.catch(() => {}); throw new DraftConflictError('Для плейлиста выполняется или проверяется операция. Решения временно заблокированы.')
+    }
+    const raw = await store.get(key)
     let old: StoredDraft | undefined
     try { old = raw ? draftSchema.parse(raw) : undefined }
     catch (error) { transaction.abort(); await transaction.done.catch(() => {}); throw error }
@@ -54,14 +68,19 @@ export class JamifyStorage {
     let draft: StoredDraft
     try { draft = draftSchema.parse({ baseline, session, revision: (old?.revision ?? 0) + 1, updatedAt: this.clock() }) }
     catch (error) { transaction.abort(); await transaction.done.catch(() => {}); throw error }
-    await transaction.store.put(draft, key); await transaction.done
+    await store.put(draft, key); await transaction.done
     return draft
   }
   async finalize(accountId: string, playlistId: string, expectedRevision: number, expectedRunId: string, after: Baseline): Promise<StoredDraft> {
     const db = await this.db()
-    const transaction = db.transaction('drafts', 'readwrite')
+    const transaction = db.transaction(['drafts', 'operations'], 'readwrite')
+    const store = transaction.objectStore('drafts')
     const key: [string, string] = [accountId, playlistId]
-    const raw = await transaction.store.get(key)
+    const operation = await transaction.objectStore('operations').get(key)
+    if (operation && !journalSchema.parse(operation).sessionFinalized) {
+      transaction.abort(); await transaction.done.catch(() => {}); throw new DraftConflictError('Финализация доступна только вместе с журналом операции.')
+    }
+    const raw = await store.get(key)
     if (!raw || raw.revision !== expectedRevision || raw.session.runId !== expectedRunId) {
       transaction.abort(); await transaction.done.catch(() => {}); throw new DraftConflictError()
     }
@@ -71,13 +90,17 @@ export class JamifyStorage {
       const session = finalizeSession(previous.session, after)
       draft = draftSchema.parse({ baseline: after, session, revision: previous.revision + 1, updatedAt: this.clock() })
     } catch (error) { transaction.abort(); await transaction.done.catch(() => {}); throw error }
-    await transaction.store.put(draft, key); await transaction.done
+    await store.put(draft, key); await transaction.done
     return draft
   }
   async clearAccount(accountId: string): Promise<void> {
     const db = await this.db()
-    const tx = db.transaction(['drafts', 'demo-playlists'], 'readwrite')
-    for (const name of ['drafts', 'demo-playlists'] as const) {
+    const tx = db.transaction(['drafts', 'demo-playlists', 'operations'], 'readwrite')
+    const operations = await tx.objectStore('operations').getAll()
+    if (operations.some((operation) => operation.accountId === accountId && !journalSchema.parse(operation).sessionFinalized)) {
+      tx.abort(); await tx.done.catch(() => {}); throw new Error('Есть незавершённая операция. Сначала проверь её результат; журнал не удалён.')
+    }
+    for (const name of ['drafts', 'demo-playlists', 'operations'] as const) {
       let cursor = await tx.objectStore(name).openCursor()
       while (cursor) { if (cursor.key[0] === accountId) await cursor.delete(); cursor = await cursor.continue() }
     }

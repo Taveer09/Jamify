@@ -34,9 +34,18 @@ export type ApplyPlan = {
   mode: 'remove-uri-groups' | 'create-clean-copy'; removeUris: string[]
   expectedOrderedEntries: Entry[]; expectedCanonical: CanonicalItem[]
   removedOccurrences: number; blockedReasons: string[]
+  draftRevision: number | null; runId: string | null
 }
 export type ApplyState = 'idle' | 'preflight' | 'applying' | 'reconciling' | 'complete' | 'conflict' | 'partial' | 'unknown'
-export type ApplyResult = { state: ApplyState; baseline?: Baseline; message: string; targetPlaylistId?: string }
+export type ApplyResult = { state: ApplyState; baseline?: Baseline; message: string; targetPlaylistId?: string; session?: ReviewSession; draftRevision?: number }
+export type MutationJournal = {
+  schemaVersion: 1; operationId: string; accountId: string; sourcePlaylistId: string
+  plan: ApplyPlan; state: ApplyState; confirmedPrefix: number
+  pendingBatch: { uris: string[]; snapshotId: string; before: CanonicalItem[]; after: CanonicalItem[] } | null
+  sessionFinalized: boolean; revision: number; updatedAt: number; message: string
+  expectedSnapshotId: string
+  retryAt: number | null
+}
 export interface PlaylistGateway {
   currentAccount(): Promise<string>
   listPlaylists(): Promise<PlaylistSummary[]>

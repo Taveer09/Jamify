@@ -1,4 +1,4 @@
-import type { Baseline, Decision, ReviewSession } from '../../contracts'
+import type { ApplyResult, Baseline, Decision, ReviewSession } from '../../contracts'
 import { assertBaseline, createSession, decide, finalizeSession, undo } from '../../domain/session'
 import { DraftConflictError } from '../../lib/persistence/database'
 import type { JamifyStorage } from '../../lib/persistence/database'
@@ -19,7 +19,7 @@ export class SessionController {
   snapshot(): SessionState { return this.state }
   subscribe(listener: (state: SessionState) => void): () => void { this.listeners.add(listener); listener(this.state); return () => { this.listeners.delete(listener) } }
   private publish(patch: Partial<SessionState>) { this.state = { ...this.state, ...patch }; for (const listener of this.listeners) listener(this.state) }
-  async open(baseline: Baseline, seed: number, restart = false): Promise<void> {
+  async open(baseline: Baseline, seed: number, restart = false, memoryOnly = false): Promise<void> {
     await this.flush()
     const previous = this.state
     if (this.failed && previous.baseline && previous.session) {
@@ -36,6 +36,12 @@ export class SessionController {
       return
     }
     if (restart) this.volatileDrafts.delete(key)
+    if (memoryOnly) {
+      this.failed = true
+      this.publish({ baseline, session: createSession(baseline, seed), saving: false, persistent: false,
+        error: 'Демо-хранилище недоступно. Решения останутся только до перезагрузки.' })
+      return
+    }
     let draft
     try { draft = await this.storage.loadDraft(baseline.accountId, baseline.playlistId) }
     catch { this.failed = true }
@@ -94,6 +100,17 @@ export class SessionController {
       const saved = await this.storage.loadDraft(baseline.accountId, baseline.playlistId)
       if (!saved || saved.revision !== this.revision || saved.session.runId !== session.runId) throw new DraftConflictError()
     } catch (error) { this.persistenceFailed(error); throw error }
+  }
+  async binding(): Promise<{ draftRevision: number; runId: string }> {
+    await this.ensureCurrentDraft()
+    return { draftRevision: this.revision!, runId: this.state.session!.runId }
+  }
+  adoptFinalized(result: ApplyResult): void {
+    if (!result.baseline || !result.session || !result.draftRevision || result.state !== 'complete') throw new Error('Операция не вернула финализированный черновик.')
+    assertBaseline(result.session, result.baseline)
+    if (this.state.session && (this.state.session.accountId !== result.session.accountId || this.state.session.playlistId !== result.session.playlistId)) throw new Error('Результат относится к другой сессии.')
+    this.failed = false; this.revision = result.draftRevision; this.changed = 0; this.saved = 0
+    this.publish({ baseline: result.baseline, session: result.session, persistent: true, saving: false, error: '' })
   }
   async finalize(after: Baseline): Promise<void> {
     await this.flush()

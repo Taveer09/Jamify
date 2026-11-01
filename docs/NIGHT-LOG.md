@@ -23,3 +23,10 @@
 - Один промежуточный browser suite имел ENOENT trace artifacts при параллельных тестах с общим test-results. Это исправлено разделением output reviewer запусков; финальный suite60/60 без этих ошибок.
 - Установлены idb8.0.4 и dev-only fake-indexeddb6.2.7, npm audit0. Добавлены фактические test:session и domain tests, без заглушек.
 - S5 UI делегирован Sol medium в src/components/styles и отдельный e2e, props заранее зафиксированы в contracts/review-ui.ts. Интегратор продолжает S4, единолично владеет contracts, persistence, screens и package. Это разрешённая PLAN параллель после S3.
+
+- Между ~02:35 и06:54 дальнейшее исполнение остановил лимит сервиса; heartbeat поступали, но работа не выдаётся за выполненную во время недоступности. В07:00 get_usage_limits подтвердил ordinaryUsageAllowed=true, primary used2%, weekly used16%. Продолжение возобновлено; cadence временно15min до09:00, чтобы usageLimited старого goal не оставил работу без следующего запуска.
+- S4 Astra xhigh review выявил P1 fresh identity и P2 snapshot/account-before-dispatch/recovery-state/Retry-After. Исправлены, добавлены regressions. Первые4 перепроверены независимым reviewer; RetryAfter persisted deadline и fake-clock test. Никаких новых Spotify запросов/мутаций в утренней работе.
+- Общий интеграционный suite выявил preview crash после успешной server/local finalization. Исправлены captured previewSource и порядок await/adoption; demo+session subset28/28 pass. Полный check110unit pass, final browser suite выполняется.
+- S5 Sol medium подготовил gestures/keyboard/compactness, интеграция закончена. Изолированный suite24/24 pass, screenshots/taste просмотрены, physical mobile/live не проверены. Новый root full run включает все сценарии S4/S5.
+
+- В07:10 финальный check110/110 type/lint/build pass; полный Chromium/WebKit88/88 pass (/tmp/jamify-s4-s5-final). Astra reviewer независимо закрыл RetryAfter с reopen IndexedDB:0 gateway calls до срока, после — только explicit resume. Сохраняем S4/S5, следующий S6 на demo без live mutations.
