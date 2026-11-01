@@ -6,7 +6,7 @@ import '../styles/review-interactions.css'
 function ignoreShortcut(event: KeyboardEvent, disabled: boolean) {
   if (disabled || event.defaultPrevented || event.repeat || event.isComposing || event.altKey) return true
   const target = event.target
-  return target instanceof HTMLElement && (target.isContentEditable || Boolean(target.closest('input,textarea,select,button,a,[contenteditable],audio,video,[role="slider"],[role="textbox"]')))
+  return target instanceof HTMLElement && (target.isContentEditable || Boolean(target.closest('input,textarea,select,button,summary,a,[contenteditable],audio,video,[role="slider"],[role="textbox"]')))
 }
 
 export function ReviewUndoShortcut({ disabled, canUndo, onUndo }: Pick<ReviewControlsProps, 'disabled' | 'canUndo' | 'onUndo'>) {

@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test'
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => { try { sessionStorage.setItem('jamify.auth.destination', 'diagnostics') } catch { /* Blocked-storage cases intentionally cannot route a diagnostic callback. */ } })
+})
+
 for (const mode of ['callback', 'refresh'] as const) {
   test(`native browser fetch supports ${mode} and profile loading`, async ({ page }) => {
     // Intercept HTTP responses, keeping the browser's native fetch implementation.
@@ -20,7 +24,7 @@ for (const mode of ['callback', 'refresh'] as const) {
         }))
       }
     }, mode)
-    await page.goto(mode === 'callback' ? '/callback?code=fixture-code&state=fixture-state' : '/')
+    await page.goto(mode === 'callback' ? '/callback?code=fixture-code&state=fixture-state' : '/diagnostics')
     await expect(page.getByRole('button', { name: 'Проверить мои плейлисты' })).toBeVisible()
     await expect(page.getByRole('alert')).not.toBeVisible()
   })
@@ -29,7 +33,7 @@ for (const mode of ['callback', 'refresh'] as const) {
 test('first run is honest about unverified integration and does not contact Spotify', async ({ page }) => {
   const requests: string[] = []
   page.on('request', (request) => { if (/spotify\.com|scdn\.co/.test(request.url())) requests.push(request.url()) })
-  await page.goto('/')
+  await page.goto('/diagnostics')
   await expect(page.getByRole('heading', { name: 'Подключение Spotify' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Войти через Spotify' })).toBeVisible()
   await expect(page.getByLabel('Client ID приложения', { exact: true })).not.toBeVisible()
@@ -39,17 +43,17 @@ test('first run is honest about unverified integration and does not contact Spot
 })
 
 test('invalid Client ID produces an inline error without leaving the app', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/diagnostics')
   await page.getByText('Настройки разработчика', { exact: true }).click()
   await page.getByLabel('Client ID приложения', { exact: true }).fill('incorrect')
   await page.getByRole('button', { name: 'Войти через Spotify' }).click()
   await expect(page.getByRole('alert')).toContainText('32 символа')
-  await expect(page).toHaveURL('http://127.0.0.1:5173/')
+  await expect(page).toHaveURL('http://127.0.0.1:5173/diagnostics')
 })
 
 test('callback credentials are removed even when the OAuth transaction is missing', async ({ page }) => {
   await page.goto('/callback?code=fixture-code&state=fixture-state')
-  await expect(page).toHaveURL('http://127.0.0.1:5173/')
+  await expect(page).toHaveURL('http://127.0.0.1:5173/diagnostics')
   await expect(page.getByRole('alert')).toContainText('Вход устарел')
   await expect(page.locator('body')).not.toContainText('fixture-code')
 })
@@ -57,7 +61,7 @@ test('callback credentials are removed even when the OAuth transaction is missin
 for (const width of [390, 768, 1440]) {
   test(`setup fits ${width}px without horizontal scrolling`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
-    await page.goto('/')
+    await page.goto('/diagnostics')
     await page.evaluate(() => document.fonts.ready)
     const dimensions = await page.evaluate(() => ({ content: document.documentElement.scrollWidth, viewport: window.innerWidth }))
     expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport)
@@ -67,7 +71,7 @@ for (const width of [390, 768, 1440]) {
 
 test('blocked browser storage leaves a readable screen with connection disabled', async ({ page }) => {
   await page.addInitScript(() => { Object.defineProperty(window, 'sessionStorage', { get() { throw new Error('storage blocked') } }) })
-  await page.goto('/')
+  await page.goto('/diagnostics')
   await expect(page.getByRole('alert')).toContainText('Браузер запретил хранилище')
   await expect(page.getByRole('button', { name: 'Войти через Spotify' })).toBeDisabled()
 })
@@ -80,7 +84,7 @@ test('callback credentials are also removed when browser storage is blocked', as
 })
 
 test('keyboard can configure and reach the connection action without an environment Client ID', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/diagnostics')
   const settings = page.locator('summary')
   await settings.focus()
   await page.keyboard.press('Enter')
@@ -112,7 +116,7 @@ test('a new account never inherits successful probe checks from a previous accou
       return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
   })
-  await page.goto('/')
+  await page.goto('/diagnostics')
   await expect(page.getByRole('button', { name: 'Проверить мои плейлисты' })).toBeVisible()
   await page.getByRole('button', { name: 'Проверить мои плейлисты' }).click()
   await expect(page.getByRole('progressbar')).toHaveAttribute('value', '1')
@@ -139,5 +143,5 @@ test('OAuth callback succeeds in browsers without AbortSignal.timeout', async ({
   await page.goto('/callback?code=fixture-code&state=fixture-state')
   await expect(page.getByRole('button', { name: 'Проверить мои плейлисты' })).toBeVisible()
   await expect(page.getByRole('alert')).not.toBeVisible()
-  await expect(page).toHaveURL('http://127.0.0.1:5173/')
+  await expect(page).toHaveURL('http://127.0.0.1:5173/diagnostics')
 })

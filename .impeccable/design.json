@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "product": "Jamify",
+  "mode": "Operate",
+  "authority": "User explicitly selected Spotify dark palette on2026-11-01",
+  "tokens": {
+    "ground": "#121212",
+    "surface": "#181818",
+    "raised": "#282828",
+    "text": "#ffffff",
+    "muted": "#b3b3b3",
+    "accent": "#1ed760",
+    "accentInk": "#071a0d",
+    "negative": "#f2a2a2"
+  },
+  "source": "src/styles/music.css",
+  "typography": {
+    "family": "Inter Variable",
+    "selfHosted": true
+  },
+  "motion": {
+    "exitMs": 200,
+    "returnMs": 240,
+    "reducedMotion": "instant decision; no artwork movement"
+  },
+  "layout": {
+    "cardDesktopPx": 360,
+    "cardMobilePx": 300,
+    "primaryActions": 2
+  },
+  "depth": "lightness-step; shadow only for floating menus",
+  "artwork": "object-fit contain; no overlays or crops"
+}

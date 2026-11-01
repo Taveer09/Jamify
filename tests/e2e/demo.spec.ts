@@ -1,3 +1,4 @@
+import { reviewOption } from './helpers/music'
 import { expect, test } from '@playwright/test'
 
 test('demo reviews random URI groups, undoes decisions and applies only after preview without Spotify', async ({ page }) => {
@@ -14,7 +15,7 @@ test('demo reviews random URI groups, undoes decisions and applies only after pr
   await expect(page.locator('.track-details h2')).toHaveText(original)
   await page.getByRole('button', { name: 'Убрать', exact: false }).click()
   await page.getByRole('button', { name: 'Оставить', exact: false }).click()
-  await page.getByRole('button', { name: 'Пропустить', exact: true }).click()
+  await reviewOption(page, 'Пропустить')
   await page.getByRole('button', { name: /Проверить решения/ }).click()
   await expect(page.locator('.preview-list li')).toHaveCount(1)
   const remaining = Number((await page.locator('.preview-heading > p').innerText()).match(/останется (\d+)/)?.[1])
@@ -39,12 +40,12 @@ test('demo plays the local audio, supports seeking and pauses before leaving the
     await page.getByRole('button', { name: 'Слушать', exact: true }).click()
   }
   await expect(page.getByRole('status')).toContainText('Играет текущий трек')
-  await page.locator('#demo-seek').fill('3000')
-  await expect(page.locator('.player-time')).toContainText('0:03')
+  await page.getByLabel('Позиция воспроизведения').fill('3000')
+  await expect(page.locator('.music-time')).toContainText('0:03')
   await page.getByRole('button', { name: 'Пауза', exact: true }).click()
   await expect(page.getByRole('status')).toContainText('Звук на паузе')
-  await page.getByRole('button', { name: 'Пропустить', exact: true }).click()
-  await expect(page.locator('#demo-seek')).toHaveValue('0')
+  await reviewOption(page, 'Пропустить')
+  await expect(page.getByLabel('Позиция воспроизведения')).toHaveValue('0')
   await expect(page.getByRole('button', { name: 'Слушать', exact: true })).toBeVisible()
 })
 
@@ -52,8 +53,8 @@ test('empty and mixed playlists preserve non-reviewable entries', async ({ page 
   await page.goto('/demo')
   await page.getByRole('button', { name: /Чистый лист/ }).click()
   await page.getByRole('button', { name: /Начать разбор/ }).click()
-  await expect(page.getByRole('heading', { name: 'Здесь пока нечего слушать.' })).toBeVisible()
-  await page.getByRole('button', { name: 'Другой плейлист' }).click()
+  await expect(page.getByRole('heading', { name: 'Можно проверить решения' })).toBeVisible()
+  await reviewOption(page, 'Другой плейлист')
   await page.getByRole('button', { name: /Особенные записи/ }).click()
   await page.getByRole('button', { name: /Начать разбор/ }).click()
   await expect(page.getByText('3 особенных записей сохранятся в плейлисте.')).toBeVisible()
@@ -85,7 +86,7 @@ test('audio failure requires an explicit choice before keep/remove becomes avail
   await page.getByRole('button', { name: 'Продолжить без звука' }).click()
   await expect(page.getByRole('button', { name: 'Убрать', exact: false })).toBeEnabled()
   await page.getByRole('button', { name: 'Убрать', exact: false }).click()
-  await expect(page.getByText('Режим без звука включён для этой сессии.')).toBeVisible()
+  await expect(page.getByRole('status')).toContainText('Без звука')
 })
 
 test('a loading audio request can be paused before playback is confirmed', async ({ page }) => {

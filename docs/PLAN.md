@@ -232,7 +232,7 @@ Undo после применения не обещается. Undo в v1 дей�
 
 Зоны: src/domain/session/**, src/features/session/**, src/lib/persistence/**, tests/domain/session/**.
 
-Действия: стабильный shuffle, 25 карточек на сессию, очередь на весь проход, skip, undo, история, восстановление после reload, account binding, очистка/TTL данных и обработка отказа IndexedDB. Прогресс считает группы и исходные вхождения раздельно.
+Действия: стабильный shuffle, непрерывная очередь на весь проход без остановки на25, skip, undo, история, восстановление после reload, account binding, очистка/TTL данных и обработка отказа IndexedDB. Прогресс считает группы и исходные вхождения раздельно.
 
 Готово: `npm run test:session`, `npm run typecheck`; тесты seed/reload/undo/skip, другой аккаунт, обновившийся baseline, storage failure. 10 000 записей не обрезаются и не создают повторные карточки. UI на ошибке сохранения не обещает продолжение после закрытия. Жизненный цикл «25 → apply → reload → карточка 26 → второй apply» проверить как контракт с fake gateway; с реальным координатором повторить на S4.
 
@@ -295,3 +295,16 @@ Undo после применения не обещается. Undo в v1 дей�
 ## 8. История независимой критики
 
 Результаты и принятые изменения фиксируются в [PLAN_REVIEW.md](PLAN_REVIEW.md). Статус согласования пользователем отражается отдельно от прохождения ревью.
+
+## User-directed revision: real library + minimal music screen (2026-11-01)
+
+User explicitly rejected demo-only entry, dense controls and black/white styling; asked for real Spotify playlists, mouse dragging and a more minimal design. This request replaces the earlier visual direction for product/demo screens. Keep diagnostics separately available; preserve safety constraints.
+
+R1 root/API: additive library reads + metadata + SDK playback adapter. Show followed playlists honestly; new Dev Mode permits item reads only for owned/collaborative playlists. Add read-only Liked Songs with requested OAuth scope. All source identity ambiguous unless proved; no live playlist mutation gateway.
+R2 UI executor: only components/MusicReview.tsx and styles/music.css under agreed contracts/music-review.ts. Light mist/white/teal/coral, one central album card, two decision buttons, contextual options, visible mouse drag. Existing ReviewCard/keyboard/undo/reduced motion retained. Root owns routing/screens/contracts/API/tests. R1 and R2 independent after contract; UI task may be delegated per this revision.
+R3 root: integrate same review scene into demo and new live product entry; legacy diagnostics remain separately routed. Load actual account/library on restore; session/account guards, no token logging. Save draft decisions but live Apply remains unavailable until known gate is resolved; export review allowed.
+R4: check/e2e, actual rendered screenshots390/768/1440, independent critical lifecycle/UI review. Mocks do not prove live. Existing Safari session may need user consent; do all independent work first.
+
+Independent plan critique incorporated: live review uses a distinct reviewKey from observed URI and its own draft namespace, never fabricates sourceUri. Live Entry sourceUri=null/canRemove=false/canCopy=false. Probe stableSnapshot restrictions stay unchanged. Add user-library-read and playlist-read-collaborative with explicit reconsent for old sessions. Liked Songs has no fake snapshot guarantee. Retain accumulated decisions across the full queue and export. Serialize SDK intents and invalidate account/selection callbacks onlogout.
+
+Latest explicit steering: remove25-card windows in BOTH demo/domain and live review. Keep all supported unique queue entries reviewable. Validate205 reviewed deletions through100/100/5 fake batches plus25→26 without apply. Final visual brief supersedes light and warm candidates: Spotify dark surfaces and green #1ed760; no new service or deployment.

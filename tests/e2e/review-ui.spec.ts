@@ -181,7 +181,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 768, height: 900 }
     await page.goto('/demo')
     await page.getByRole('button', { name: /Начать разбор/ }).click()
     await expect(page.locator('.swipe-card')).toBeVisible()
-    for (const name of ['Убрать', 'Оставить', 'Пропустить']) {
+    for (const name of ['Убрать', 'Оставить']) {
       const box = await page.getByRole('button', { name, exact: name === 'Пропустить' }).boundingBox()
       expect(box).not.toBeNull()
       expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height)
@@ -209,9 +209,9 @@ test('review demo keyboard, undo, swipe and ten rapid decisions keep audio bound
     const previous = await page.locator('.track-details h2').innerText()
     await swipe(page, index % 2 ? 'left' : 'right')
     await expect(page.locator('.track-details h2')).not.toHaveText(previous)
-    await expect(page.locator('.session-progress > span')).toContainText(`${index + 3} / 25`)
+    await expect(page.locator('.session-progress > span')).toContainText(`${index + 3} / 3200`)
     await expect(page.getByRole('button', { name: 'Слушать', exact: true })).toBeVisible()
-    await expect(page.locator('#demo-seek')).toHaveValue('0')
+    await expect(page.getByLabel('Позиция воспроизведения')).toHaveValue('0')
     await expect(page.getByRole('status')).not.toContainText('Играет текущий трек')
   }
 })
@@ -227,7 +227,7 @@ test('review demo restores the last card with keyboard undo after the session en
   }
   const last = await page.locator('.track-details h2').innerText()
   await page.keyboard.press('ArrowDown')
-  await expect(page.getByRole('heading', { name: 'Сессия завершена.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Можно проверить решения' })).toBeVisible()
   await expect(page.getByRole('article', { name: 'Текущий трек' })).toHaveCount(0)
   await page.keyboard.press('Control+z')
   await expect(page.locator('.track-details h2')).toHaveText(last)
@@ -273,7 +273,8 @@ test('exit stays on its track, undo cancels the first pending choice and buttons
   await page.locator('.track-card-motion').evaluate((node) => node.getAnimations().forEach((animation) => animation.finish()))
   await expect(page.locator('.session-progress > span')).toContainText('2 / 6')
   await expect(page.locator('.track-details h2')).not.toHaveText(title)
-  await expect(page.locator('.review-summary')).toContainText('Групп на удаление1')
+  await page.getByRole('button', { name: /Проверить решения/ }).first().click()
+  await expect(page.locator('.preview-list li')).toHaveCount(1)
 })
 
 test('grabbing an exiting card and pointercancel aborts the pending choice; feedback never covers art', async ({ page }) => {

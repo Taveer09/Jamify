@@ -52,3 +52,12 @@
 - Final390/768/1440 screenshots reviewed; taste measurements0FAIL/0WARN after CSS alignment/contrast polish. Headless browser checks do not prove physical touch/live Spotify/audio audibility.
 
 Final CSS check: npm run check156/156 pass; targeted review-ui Chromium/WebKit32/32 pass after mobile stack and disabled contrast polish.
+
+## Full queue and Spotify palette revision
+
+- `npm run check`:167/167 tests + types/lint/build pass (последовательный запуск после завершения browser suite).
+- Full Playwright126/126 Chromium/WebKit pass; targeted library/review50/50 также pass. Старые6 first-fold тестов сначала искали скрытый Skip; обновлены под пользовательское требование2главных кнопок, само Skip продолжает проверяться через меню и ArrowDown.
+- Новая live-route fixture матрица: pagination70tracks,27choices/reload/export; no playlist/library writes; Liked403/reconsent; followed403; logout while GET pending; blocked localStorage with memory restore; SDK foreign URI invalidates prior playing evidence. OAuth/SDK fixtures не доказывают живую медиатеку и звук.
+- Domain queue3200unique/10000source entries проходит25→26 без окна.205 согласованных draft-removals проверены последовательными fake batches100/100/5, full ordered read-back и finalization. Existing forged150request по-прежнему не отправляет mutation.
+- Review обнаружил stale playing confirmation, unhandled activation rejection, blocked localStorage read и исчезающие unsupported entries; подтверждённые случаи исправлены, regression tests добавлены. Независимый UI finish review: ship по шести снимкам.
+- Новый live продукт в реальном аккаунте: not-run в этой ревизии. Исторические Safari OAuth/SDK actual URI pass и DELETE unknown остаются прежними. Mobile physical audio, relinking/source proof, production apply — открыты.

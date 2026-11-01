@@ -53,7 +53,7 @@ async function setup(page: Page, waitForRead?: () => Promise<void>) {
     const items = id === 'test' ? testItems : [a, b, a, c]
     return route.fulfill({ json: { items: items.map((uri) => ({ item: { uri, type: 'track', name: 'Fixture track' } })), total: items.length, next: null } })
   })
-  await page.goto('/')
+  await page.goto('/diagnostics')
   await page.getByRole('button', { name: 'Проверить мои плейлисты' }).click()
   return { writes, externalEdit: () => { version = 'external-edit' } }
 }

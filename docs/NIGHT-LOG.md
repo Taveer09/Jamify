@@ -35,3 +35,9 @@
 - Первый реальный CI567f432:85/88 browsers pass, fail keyboard без локального Client ID и seek/buffering pause. Исправлены: тест задаёт fixture ID, pause доступна при loading без ложного playing. Узкий subset46/46 и полный98/98 pass. Minimum Node22.13 из ESLint engines; локальный Node22.13 check145/145 прошёл до последних safety regressions.
 - В12:07 проверено текущее время; после07:22 до этого запуска нет подтверждённых новых изменений. Heartbeat сообщения не выдаются за работу. Дедлайн09:00 прошёл: новые features не начинаются, сохраняем точные docs/ветку, проверяем существующий diff. Automation jamify удалена через tool (deleteStatus=deleted), папка automation отсутствует.
 - Remaining: live S0DELETEunknown/S2 gateway/livecopy/mobileaudio/relinking; полный clean-run и финальныйS9 audit/GIF не были закончены до дедлайна. Никаких merge/deploy.
+
+### Desktop user continuation — full playlist and Spotify color request
+
+Работа продолжена внутри desktop, без внешнего Terminal/Codex CLI. User-directed revision сменила обычный root с S0 на настоящую read-only медиатеку, вынесла диагностику в/diagnostics, добавила общий компактный MusicReview и полный проход без25-card cap. Последние визуальные уточнения последовательно отменили light/teal и промежуточную warm palette; закреплена точная Spotify dark/green. История предыдущих ночных проверок не является доказательством новых live возможностей.
+
+Independent lifecycle review исправлен: wrong URI сбрасывает playing; stale rejected activation consumed; blocked localStorage reads переходят в volatile memory и source drafts сохраняются в рамках вкладки; excluded entries объясняются. Source identity не изобретается. Полный check167 и e2e126 pass. Обложки/скриншоты только собственные fixtures; новые реальные Spotify записи не выполнялись, unknown test не тронут. Commit/push толькоcodex/night-2026-11-01, без merge/deploy.
