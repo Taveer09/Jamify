@@ -12,3 +12,12 @@ Stack: React, TypeScript, Vite. Current work: S0 foundation and capability probe
 - Do not publish/push/deploy unless the user requests it. Local commits are allowed after checks; no commit is required per step.
 - Future test scripts must select meaningful tests; never add success-only placeholders. Full live S0 remains open until interactive probes are actually performed.
 - Frontend skills available locally: design-taste-frontend, ui-ux-pro-max. Verification: verify; independent mutation reviews: hard-review.
+
+## Frontend skills selected for Jamify
+
+User requested these skills for Jamify UI work. Read the relevant installed SKILL.md before applying it; skills live in ~/.codex/skills/.
+- Keep the established design-taste-frontend direction; use frontend-design for intentional layout/type and impeccable for targeted visual critique, without restarting the visual direction automatically.
+- Use emil-design-eng and animate for swipe/card motion: interruptible gestures, responsive feedback, reduced-motion support; use animation-performance when profiling dropped frames. Use review-animations for a requested motion review (it is marked disable-model-invocation).
+- Use react-best-practices (skill name vercel-react-best-practices) for React performance, and existing web-design-guidelines for accessibility and interface review.
+- Use webapp-testing for browser exploration and screenshot verification; retain this repository's existing TypeScript Playwright suite rather than migrating it to Python solely because of skill examples.
+- Newly installed skills supplement the approved plan. They do not authorize Spotify writes, deployment, extra services, hooks or changes to other tools.

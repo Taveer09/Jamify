@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CapabilityProbe, trackUri } from '../../src/features/capabilities/probe'
 import type { PlaylistSnapshot, SpotifyApi } from '../../src/lib/spotify/api'
+import { SpotifyError } from '../../src/lib/spotify/api'
 import { MemoryStorage } from './helpers'
 
 const a = `spotify:track:${'A'.repeat(22)}`
@@ -102,6 +103,15 @@ describe('isolated disposable playlist probe', () => {
     await expect(probe.removeDuplicateGroup('account')).rejects.toThrow(/требует проверки/)
     expect(probe.state()?.status).toBe('unknown')
     await expect(probe.removeDuplicateGroup('account')).rejects.toThrow(/только/)
+    expect(api.request).toHaveBeenCalledTimes(3)
+  })
+  it('preserves actionable HTTP errors while keeping the failed deletion blocked', async () => {
+    const { probe, api } = setup()
+    await probe.create('account', [a, b, c])
+    api.request.mockRejectedValueOnce(new SpotifyError(403, null, false))
+    await expect(probe.removeDuplicateGroup('account')).rejects.toThrow('HTTP 403')
+    expect(probe.state()?.status).toBe('unknown')
+    await expect(probe.removeDuplicateGroup('account')).rejects.toThrow('только')
     expect(api.request).toHaveBeenCalledTimes(3)
   })
   it('aborts before create if the local journal cannot be saved', async () => {

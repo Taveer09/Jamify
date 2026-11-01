@@ -82,4 +82,4 @@
 
 - Пользователь согласовал начало реализации; S0 выполнен локально, live gate ожидает живого входа и проб.
 - Независимая критика: см. PLAN_REVIEW.md.
-- S1–S9: не начаты. Реальный API, воспроизведение и мутации не подтверждены; результаты S0 и команды проверки — в STATUS.md и API_CAPABILITIES.md.
+- S1: локальное demo/contracts выполнено, independent review с исправлениями пройдено. S2 live gate остаётся открыт из-за DELETE unknown. S3 session/persistence выполнен на demo gateway, review исправления проверены. S4 durable remove и S5 gestures реализованы и проверены на demo; S6 durable copy выполнен на demo,156 unit и98+2 browser checks pass. S2 live и полная приёмка S7–S9 не завершены; фактические live результаты и команды — STATUS.md и API_CAPABILITIES.md.

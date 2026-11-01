@@ -165,6 +165,7 @@ export function App() {
                   </details>
                 </form>
               </section>
+              <section className="panel"><h2>Сначала попробовать?</h2><p className="description">Разбери вымышленный плейлист с локальным звуком — без входа в аккаунт.</p><a className="button secondary" href="/demo">Открыть демо →</a></section>
               <section className="panel setup-panel" aria-labelledby="setup-title"><h2 id="setup-title">Один вход через Spotify</h2><p>Войди в свой аккаунт и разреши Jamify доступ. Создавать приложение Spotify и искать идентификаторы тебе не нужно.</p><p className="field-hint">Сейчас Jamify тестируется в закрытом режиме. Доступ получают аккаунты, добавленные владельцем приложения.</p></section>
             </> : <>
               <section className="panel" aria-labelledby="read-title"><div className="panel-heading"><h2 id="read-title">Твои плейлисты</h2><button className="text-button" disabled={Boolean(busy)} onClick={() => void run('Обновляем список', loadPlaylists)}>Обновить</button></div>

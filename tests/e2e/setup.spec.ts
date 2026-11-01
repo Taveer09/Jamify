@@ -79,11 +79,19 @@ test('callback credentials are also removed when browser storage is blocked', as
   await expect(page.getByRole('alert')).toContainText('Браузер запретил хранилище')
 })
 
-test('keyboard can reach the connection action', async ({ page }) => {
+test('keyboard can configure and reach the connection action without an environment Client ID', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Войти через Spotify' }).focus()
+  const settings = page.locator('summary')
+  await settings.focus()
+  await page.keyboard.press('Enter')
   await page.keyboard.press('Tab')
-  await expect(page.locator('summary')).toBeFocused()
+  await expect(page.getByLabel('Client ID приложения', { exact: true })).toBeFocused()
+  await page.keyboard.type('a'.repeat(32))
+  await settings.focus()
+  await page.keyboard.press('Enter')
+  await page.keyboard.press('Shift+Tab')
+  await expect(page.getByRole('button', { name: 'Войти через Spotify' })).toBeFocused()
+  await expect(page.getByRole('button', { name: 'Войти через Spotify' })).toBeEnabled()
 })
 
 test('a new account never inherits successful probe checks from a previous account', async ({ page }) => {
