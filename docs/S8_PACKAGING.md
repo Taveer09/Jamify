@@ -11,7 +11,7 @@
 
 ## Чистый локальный запуск
 
-Требуется Node.js не ниже `22.12.0` и npm, поставляемый с Node.js.
+Требуется Node.js `22.13.x` или `24+` и npm, поставляемый с Node.js.
 
 ```sh
 git clone https://github.com/Taveer09/Jamify.git
@@ -40,7 +40,7 @@ npm run dev
 | Создание disposable playlist, append и read-back | Live pass | Выполнено только на созданном probe playlist |
 | Удаление тестовых URI | `unknown`; live gate не закрыт | Повтор DELETE не выполнялся; reconciliation прочитал исходные A,B,A,C |
 | Реальное получение звука, paused event, relinking без `linked_from` | `not-run` или не подтверждено | Не выводить pass из тестов/фикстур |
-| GitHub CI | `not-run` для этой конфигурации | Требует запуска workflow на GitHub |
+| GitHub CI | Первый run567f432 — fail,85/88 browsers | Исправления и новый run — QA.md |
 | Публичный production deployment | `not-run` | Не входит в S8 |
 
 Пока live DELETE остаётся `unknown`, production v1 и удаление реальных пользовательских треков нельзя считать готовыми. Не повторяйте неоднозначные Spotify mutations автоматически; сначала используйте сохранённый журнал и read-only reconciliation.
@@ -48,3 +48,5 @@ npm run dev
 ## Контроль перед публикацией
 
 Перед коммитом просмотрите итоговый diff и убедитесь, что `.env.local`, токены и персональные данные не попали в отслеживаемые файлы или CI artifacts. Запуск локального YAML, если он будет отдельно проверен, всё равно не считается удалённым GitHub CI pass.
+
+После первого remote run обнаружены реальные CI failures, а не только YAML validation; актуальный протокол исправлений и перезапуска находится в QA.md.

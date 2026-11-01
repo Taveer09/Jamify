@@ -30,3 +30,8 @@
 - S5 Sol medium подготовил gestures/keyboard/compactness, интеграция закончена. Изолированный suite24/24 pass, screenshots/taste просмотрены, physical mobile/live не проверены. Новый root full run включает все сценарии S4/S5.
 
 - В07:10 финальный check110/110 type/lint/build pass; полный Chromium/WebKit88/88 pass (/tmp/jamify-s4-s5-final). Astra reviewer независимо закрыл RetryAfter с reopen IndexedDB:0 gateway calls до срока, после — только explicit resume. Сохраняем S4/S5, следующий S6 на demo без live mutations.
+
+- Около07:15–07:22 реализованы S6 durable demo copy и UI. Sol high исполнитель, Astra xhigh независимый reviewer; повреждение journal/согласованная подмена plan исправлены дляcopy/remove. Check156/156, apply66/66, независимые19/19; полный browser98/98 и отдельный large-copy2/2 pass. No live writes.
+- Первый реальный CI567f432:85/88 browsers pass, fail keyboard без локального Client ID и seek/buffering pause. Исправлены: тест задаёт fixture ID, pause доступна при loading без ложного playing. Узкий subset46/46 и полный98/98 pass. Minimum Node22.13 из ESLint engines; локальный Node22.13 check145/145 прошёл до последних safety regressions.
+- В12:07 проверено текущее время; после07:22 до этого запуска нет подтверждённых новых изменений. Heartbeat сообщения не выдаются за работу. Дедлайн09:00 прошёл: новые features не начинаются, сохраняем точные docs/ветку, проверяем существующий diff. Automation jamify удалена через tool (deleteStatus=deleted), папка automation отсутствует.
+- Remaining: live S0DELETEunknown/S2 gateway/livecopy/mobileaudio/relinking; полный clean-run и финальныйS9 audit/GIF не были закончены до дедлайна. Никаких merge/deploy.

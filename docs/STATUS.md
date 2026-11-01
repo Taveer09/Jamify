@@ -6,7 +6,7 @@
 
 Реализованы Vite/React/TypeScript-каркас, локальный экран подключения, PKCE/refresh, HTTP-адаптер, consistent pagination, SDK-адаптер и изолированная проба на новом приватном плейлисте. Документы перенесены из cases/playlist-swipe в docs; Client ID задан локально. Код и команды проверки существуют, дальнейшие scripts добавляются вместе с соответствующими этапами, без пустых зелёных заглушек.
 
-Проверено: typecheck, lint, production build, 110 unit/domain/capability tests и 88 Playwright-сценариев (Chromium и WebKit) прошли. npm audit: 0 уязвимостей; minimatch закреплён на исправленной 11.0.3 через override, lint и tests с ним проходят. Браузеры автопроверки: Chromium 156 и WebKit 27.2; viewport 390/768/1440, blocked storage, OAuth callback cleanup, account binding, клавиатура. Taste lint: 0 FAIL/0 WARN; browser inspector: 0 FAIL/1 WARN (независимые панели разной высоты, обоснование в DESIGN.md). Все итоговые снимки просмотрены.
+Проверено: typecheck, lint, production build, 156 unit/domain/capability tests; полный Playwright suite98/98 и дополнительно2/2 large-copy сценария (Chromium и WebKit) прошли. npm audit: 0 уязвимостей; minimatch закреплён на исправленной 11.0.3 через override, lint и tests с ним проходят. Браузеры автопроверки: Chromium 156 и WebKit 27.2; viewport 390/768/1440, blocked storage, OAuth callback cleanup, account binding, клавиатура. Taste lint: 0 FAIL/0 WARN; browser inspector: 0 FAIL/1 WARN (независимые панели разной высоты, обоснование в DESIGN.md). Все итоговые снимки просмотрены.
 
 Независимое ревью выявило ошибки lifecycle/account binding; подтверждённые находки исправлены и закреплены regression tests (см. S0_REVIEW.md). Живой OAuth/profile/refresh, создание/append/read теста и SDK actual URI подтвердились; DELETE остался unknown — полный S0 не закрыт. Публичный доступ ограничен Development Mode; скрытие Client ID это ограничение не меняет.
 
@@ -16,14 +16,14 @@
 
 Вмешательство пользователя для независимых demo/session работ не требуется. Закрытие DELETE live gate и подтверждение неоднозначной идентичности остаются условиями включения production mutations.
 
-S1 реализован локально: /demo с вымышленными плейлистами, собственным аудио, случайными карточками, keep/remove/skip/undo, preview и проверенным in-memory apply. S3 session/persistence, S4 durable remove и S5 gestures реализованы на demo gateway. S2 live и S6–S9 ещё не завершены; полноценный live apply остаётся закрыт. Production mutations и дальнейшая live-интеграция не объявляются готовыми до S0 live gate.
+S1 реализован локально: /demo с вымышленными плейлистами, собственным аудио, случайными карточками, keep/remove/skip/undo, preview и проверенным in-memory apply. S3 session/persistence, S4 durable remove и S5 gestures реализованы на demo gateway. S6 durable demo copy реализован и проверен; S2 live и полная приёмка S7–S9 ещё не завершены; полноценный live apply остаётся закрыт. Production mutations и дальнейшая live-интеграция не объявляются готовыми до S0 live gate.
 
 Исходная оценка S0 в PLAN.md включала успешную живую пробу, поэтому она пока не закрыта. После входа и теста API пересчитать оставшийся бюджет, особенно при новых ограничениях Spotify; ожидание аккаунта не считать временем генерации кода. По отдельному поручению пользователя создан публичный [GitHub-репозиторий Jamify](https://github.com/Taveer09/Jamify), исходная история и исправления отправлены в `main`. Авторство коммитов проверяется через GitHub; фиктивные коммиты и изменение дат не применяются. `.env.local` и временная диагностика не опубликованы; деплой не выполнялся.
 
 
 ## Ночная работа
 
-Пользователь поручил работать до утра (ориентир 09:00 2026-11-01 Asia/Oral), выбирать модели/effort и периодически проводить ревью. Ветка `codex/night-2026-11-01`; подробные задачи и условия в OVERNIGHT.md, факты — NIGHT-LOG.md. После возобновления в07:00 heartbeat jamify сохранён ACTIVE с cadence15 минут в локальном automation.toml; история ограничений — NIGHT-LOG.md. Main автоматически не сливается, ночная ветка может публиковаться по прежнему поручению пользователя. S1 demo/contracts завершён локально и прошёл независимое Astra xhigh review с исправлениями; S3 session/persistence завершён локально, S4 operation journal и S5 UI проверены; следующий независимый шаг — S6 demo copy при открытом DELETE live gate.
+Пользователь поручил работать до утра (ориентир 09:00 2026-11-01 Asia/Oral), выбирать модели/effort и периодически проводить ревью. Ветка `codex/night-2026-11-01`; подробные задачи и условия в OVERNIGHT.md, факты — NIGHT-LOG.md. После возобновления в07:00 heartbeat работал с cadence15 минут. Удалён в12:07 при первом успешном завершении после дедлайна; история — NIGHT-LOG.md. Main автоматически не сливается, ночная ветка может публиковаться по прежнему поручению пользователя. S1 demo/contracts завершён локально и прошёл независимое Astra xhigh review с исправлениями; S3 session/persistence завершён локально, S4 operation journal и S5 UI проверены; S6 demo copy проверен; полный live сценарий и финальная приёмка остаются открыты.
 
 
 ## S1 — демо и контракты
@@ -51,3 +51,16 @@ S4: persistent operation journal до dispatch, Web Locks, account/snapshot/cano
 S5: Pointer Events свайпы, кнопки, клавиши, Ctrl/Cmd+Z, guards для IME/input/repeat/stale URI, reduced-motion, отзывчивые карточки. Финальные screenshot проверки 390/768/1440 и отдельные UI24/24 pass — S5_REVIEW.md. Физический телефон и live mobile audio не проверены.
 
 Итоговый npm run check:110/110 unit, typecheck/lint/build pass. Полный Chromium/WebKit suite88/88 pass (/tmp/jamify-s4-s5-final). Preview crash после server verify исправлен и покрыт pageerror regression. Retry-After независимо перепроверен после открытия новой IndexedDB connection: до срока apply/recover/resume дают0 gateway calls; после срока только explicit resume отправляет DELETE. Моки не закрывают S0 live gate.
+
+
+## Сохранённый итог ночного этапа
+
+Проверка времени:12:07 Asia/Oral,1 ноября. Новая разработка остановлена; automation jamify удалена, наличие папки automation после удаления не обнаружено. После07:22 в истории до этого запуска нет подтверждённых изменений; поступавшие heartbeat не считаются выполненной работой.
+
+S6: очищенная private copy на demo gateway, keep-first в source order, source не меняется. Pending create/ID/append-prefix сохраняются; потеря create ID не приводит к новой копии; неоднозначный append проверяется чтением без повтора. Atomic финализация сохраняет source baseline отдельно от targetBaseline. Общий journal сверяется с замороженными решениями: подмена согласованного плана или URI не разрешает чужую запись. Реализовал Sol high; Astra xhigh независимо проверил19 failure cases и66 repository apply tests; замечания исправлены. Подробнее S6_IMPLEMENTATION.md.
+
+Итог до остановки: npm run check156/156, полный Chromium/WebKit98/98, дополнительно large-copy2/2:10000 source entries →3200 unique target entries, source сохранён. Последнее изменение после full suite добавляло только эти2 теста. Copy preview просмотрен на390/768/1440, нет overflow; taste0 FAIL, один WARN о51px промежутке в desktop confirmation. Автоматический GIF и полный финальный S9 аудит не завершены. S8 добавил README/снимки/MIT/privacy/CI и OFL Inter.
+
+Первый remote CI на567f432 упал:85/88 browsers pass. Исправлены зависимость keyboard test от локального Client ID и невозможность pause при loading/buffering; minimum Node22.13 согласован с ESLint. Новый CI и чистый запуск указываются в QA.md только по факту. Ночной код сохраняется в codex/night-2026-11-01, без merge main и деплоя.
+
+Полный пользовательский v1 пока НЕ готов: S0 DELETE unknown, поэтому S2 production gateway/apply не включены, S6 live copy и mobile/audio/relinking не подтверждены. Основные плейлисты не менялись, неоднозначный DELETE не повторялся.
