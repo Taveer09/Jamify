@@ -42,6 +42,7 @@ async function setup(page: Page, waitForRead?: () => Promise<void>) {
     if (path === 'me') return route.fulfill({ json: { id: 'fixture-account' } })
     if (path === 'me/playlists' && method === 'GET') return route.fulfill({ json: { items: [metadata('original'), metadata('second')], next: null, total: 2 } })
     if (path === 'me/playlists' && method === 'POST') { version = 'empty'; return route.fulfill({ json: metadata('test') }) }
+    if (path === 'me/player') return method === 'PUT' ? route.fulfill({status:204}) : route.fulfill({json:{device:{id:'fixture-device',is_active:true}}})
     if (path === 'me/player/play') return route.fulfill({ status: 204 })
     const match = /^playlists\/(original|second|test)(\/items)?$/.exec(path)
     if (!match) throw new Error(`Unexpected fixture request: ${path}`)
@@ -53,7 +54,7 @@ async function setup(page: Page, waitForRead?: () => Promise<void>) {
     const items = id === 'test' ? testItems : [a, b, a, c]
     return route.fulfill({ json: { items: items.map((uri) => ({ item: { uri, type: 'track', name: 'Fixture track' } })), total: items.length, next: null } })
   })
-  await page.goto('/')
+  await page.goto('/diagnostics')
   await page.getByRole('button', { name: 'Проверить мои плейлисты' }).click()
   return { writes, externalEdit: () => { version = 'external-edit' } }
 }
@@ -76,7 +77,7 @@ test('all S0 controls complete their fixture flow and writes stay in the disposa
   await expect(page.getByRole('button', { name: 'Удалить A только из теста' })).toBeEnabled()
   await page.getByRole('button', { name: 'Удалить A только из теста' }).click()
   await expect(page.getByText('Удаление URI-группы подтверждено.', { exact: false })).toBeVisible()
-  const mutations = writes.filter((request) => request.path !== 'me/player/play')
+  const mutations = writes.filter((request) => !['me/player','me/player/play'].includes(request.path))
   expect(mutations.map(({ method, path }) => `${method} ${path}`)).toEqual(['POST me/playlists', 'POST playlists/test/items', 'DELETE playlists/test/items'])
   expect(mutations[0].body.public).toBe(false)
   expect(mutations[1].body.uris).toEqual([a, b, a, c])

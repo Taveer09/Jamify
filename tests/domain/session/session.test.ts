@@ -5,14 +5,16 @@ import { buildApplyPlan } from '../../../src/domain/playlist'
 import { DemoApplyCoordinator, DemoPlaylistGateway } from '../../../src/demo/gateway'
 
 describe('review sessions', () => {
-  it('keeps the full unique queue and stops at 25 without silently truncating 10,000 entries', () => {
+  it('reviews the entire queue beyond 25 without truncating 10,000 entries', () => {
     const baseline = demoFixtures()[3]
     let session = createSession(baseline, 42)
     expect(session.queue).toHaveLength(3200)
     const queue = [...session.queue]
     for (let i = 0; i < 25; i++) session = decide(session, currentUri(session)!, 'keep')
-    expect(currentUri(session)).toBeNull()
-    expect(decide(session, queue[25], 'remove')).toBe(session)
+    expect(currentUri(session)).toBe(queue[25])
+    session = decide(session, queue[25], 'remove')
+    expect(currentUri(session)).toBe(queue[26])
+    expect(session.history).toHaveLength(26)
     expect(session.queue).toEqual(queue)
     expect(baseline.orderedEntries).toHaveLength(10_000)
   })

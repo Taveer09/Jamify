@@ -185,6 +185,22 @@ describe('journal transaction failure boundaries', () => {
     expect((await storage.loadDraft(plan.accountId, plan.playlistId))?.session.cursor).toBe(0)
     expect(mutation).toHaveBeenCalledTimes(1)
   })
+  it('applies 205 actual reviewed removals in bounded batches after removing the 25-card cap', async () => {
+    const { coordinator, gateway, storage, mutation, baseline, session } = await setup('large')
+    let reviewed=session
+    for(let i=1;i<205;i++)reviewed=decide(reviewed,currentUri(reviewed)!,'remove')
+    const previous=await storage.loadDraft(baseline.accountId,baseline.playlistId)
+    const saved=await storage.saveDraft(baseline,reviewed,previous!.revision)
+    const plan={...buildApplyPlan(baseline,reviewed.decisions,'remove-uri-groups'),draftRevision:saved.revision,runId:reviewed.runId}
+    const result=await coordinator.apply(plan)
+    expect(result.state).toBe('complete')
+    expect(mutation.mock.calls.map(call=>call[1].length)).toEqual([100,100,5])
+    expect((await gateway.loadBaseline('large')).orderedEntries.map(entry=>entry.sourceUri)).toEqual(plan.expectedOrderedEntries.map(entry=>entry.sourceUri))
+    const resumed=await storage.loadDraft(baseline.accountId,baseline.playlistId)
+    expect(resumed?.session.reviewedUris).toHaveLength(205)
+    expect(resumed?.session.queue).toHaveLength(2995)
+    expect(resumed?.session.history).toEqual([])
+  })
   it('rejects batches exceeding the current reviewed-session decisions before any write', async () => {
     const { coordinator, gateway, storage, mutation } = await setup('large')
     const baseline = await gateway.loadBaseline('large')

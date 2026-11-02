@@ -1,3 +1,4 @@
+import { reviewOption } from './helpers/music'
 import { expect, test } from '@playwright/test'
 
 test('large copy verifies all 3200 unique entries without changing its 10000-entry source', async ({ page }) => {
@@ -5,7 +6,7 @@ test('large copy verifies all 3200 unique entries without changing its 10000-ent
   await page.goto('/demo')
   await page.getByRole('button', { name: /Большая коллекция/ }).click()
   await page.getByRole('button', { name: /Начать разбор/ }).click()
-  await page.getByRole('button', { name: /Проверить решения/ }).click()
+  await reviewOption(page, 'Проверить решения')
   await page.getByRole('radio', { name: 'Создать копию без дублей' }).check()
   await expect(page.getByRole('heading', { name: 'Создать копию из 3200 записей?' })).toBeVisible()
   // A collapsed contents disclosure must not mount thousands of offscreen rows.
@@ -25,7 +26,7 @@ test('clean copy preserves source and keeps the first exact URI in source order,
   page.on('request', (request) => { if (/spotify\.com|scdn\.co/.test(request.url())) spotify.push(request.url()) })
   await page.goto('/demo')
   await page.getByRole('button', { name: /Начать разбор/ }).click()
-  await page.getByRole('button', { name: /Проверить решения/ }).click()
+  await reviewOption(page, 'Проверить решения')
   await page.getByRole('radio', { name: 'Создать копию без дублей' }).check()
   await expect(page.getByRole('heading', { name: 'Создать копию из 6 записей?' })).toBeVisible()
   await expect(page.locator('.preview-heading > p')).toContainText('2 точных дублей исключено')
@@ -58,7 +59,7 @@ test('mixed entries block a clean copy without losing them or writing source', a
   await page.goto('/demo')
   await page.getByRole('button', { name: /Особенные записи/ }).click()
   await page.getByRole('button', { name: /Начать разбор/ }).click()
-  await page.getByRole('button', { name: /Проверить решения/ }).click()
+  await reviewOption(page, 'Проверить решения')
   await page.getByRole('radio', { name: 'Создать копию без дублей' }).check()
   await expect(page.getByRole('alert')).toContainText('Копию нельзя создать без потерь')
   await expect(page.getByRole('button', { name: 'Создать копию в демо' })).toBeDisabled()

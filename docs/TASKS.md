@@ -42,7 +42,7 @@
 
 ### C — S3, Sol high
 
-> Выполни S3, не меняя Spotify mutation layer. Сделай seed shuffle по уникальным sourceUri, сессии по 25, skip, undo, историю и восстановление IndexedDB с account/playlist binding. Не теряй исходные вхождения и порядок. Покрой reload, storage failure, смену аккаунта, устаревший baseline и 10 000 entries. UI подключает store через контракты, без fetch из компонентов.
+> Выполни S3, не меняя Spotify mutation layer. Сделай seed shuffle по уникальным sourceUri, вся очередь без окон по25, skip, undo, историю и восстановление IndexedDB с account/playlist binding. Не теряй исходные вхождения и порядок. Покрой reload, storage failure, смену аккаунта, устаревший baseline и 10 000 entries. UI подключает store через контракты, без fetch из компонентов.
 
 ### D — S4, Sol high
 
@@ -83,3 +83,7 @@
 - Пользователь согласовал начало реализации; S0 выполнен локально, live gate ожидает живого входа и проб.
 - Независимая критика: см. PLAN_REVIEW.md.
 - S1: локальное demo/contracts выполнено, independent review с исправлениями пройдено. S2 live gate остаётся открыт из-за DELETE unknown. S3 session/persistence выполнен на demo gateway, review исправления проверены. S4 durable remove и S5 gestures реализованы и проверены на demo; S6 durable copy выполнен на demo,156 unit и98+2 browser checks pass. S2 live и полная приёмка S7–S9 не завершены; фактические live результаты и команды — STATUS.md и API_CAPABILITIES.md.
+
+## Текущая desktop-поправка
+
+Пользователь явно расширил чтение до медиатеки/Любимых и потребовал все треки за проход. Root интегрирует additive live-read путь отдельно от mutation coordinator; UI исполнитель меняет общую музыкальную сцену/стили, независимые ревьюеры проверяют lifecycle и итоговый рендер. Цветовое решение: последним запросом закреплена палитра Spotify, светлая/бирюзовая и промежуточная тёплая версии отменены. Права на реальные playlist writes не расширены.

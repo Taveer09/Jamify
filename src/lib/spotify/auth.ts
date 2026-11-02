@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { RequestTimeoutError, withRequestTimeout } from './request'
 
 export const SCOPES = [
-  'playlist-read-private', 'playlist-modify-private', 'playlist-modify-public',
+  'playlist-read-private', 'playlist-read-collaborative', 'user-library-read', 'playlist-modify-private', 'playlist-modify-public',
   'streaming', 'user-read-playback-state', 'user-modify-playback-state',
   'user-read-private', 'user-read-email',
 ] as const

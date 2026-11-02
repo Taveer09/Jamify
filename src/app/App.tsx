@@ -61,7 +61,7 @@ export function App() {
     const callback = window.location.pathname === '/callback'
     const callbackUrl = window.location.href
     // Remove authorization code/state before the request or any rendering of errors.
-    if (callback) window.history.replaceState(null, '', '/')
+    if (callback) window.history.replaceState(null, '', '/diagnostics')
     if (!auth || !api) return
     let active = true
     async function restore() {
@@ -148,6 +148,7 @@ export function App() {
                 <p className="description">Подключи Spotify, чтобы Jamify мог читать твои плейлисты и воспроизводить музыку. Пароль вводится только на сайте Spotify.</p>
                 <form onSubmit={(event) => { event.preventDefault(); void run('Переходим в Spotify', async () => {
                   if (!auth) throw new Error(runtime.error)
+                  window.sessionStorage.setItem('jamify.auth.destination', 'diagnostics')
                   window.location.assign(await auth.authorize({ clientId: clientId.trim(), redirectUri }, window.location.origin))
                 }) }}>
                   {user ? <button type="button" className="button primary" disabled={Boolean(busy)} onClick={() => void run('Загружаем плейлисты', loadPlaylists)}>Проверить мои плейлисты <span aria-hidden="true">→</span></button>

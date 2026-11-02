@@ -1,0 +1,13 @@
+.git
+node_modules
+dist
+.env*
+.codex
+.taste-skill
+.impeccable
+docs
+tests
+test-results
+playwright-report
+*.local
+.DS_Store

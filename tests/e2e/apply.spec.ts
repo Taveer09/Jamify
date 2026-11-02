@@ -1,3 +1,4 @@
+import { reviewOption } from './helpers/music'
 import { expect, test } from '@playwright/test'
 
 test('reload reconciles a verified server change after a crash before local finalization', async ({ page }) => {
@@ -45,6 +46,6 @@ test('an unknown unchanged request stays blocked after reload and read-only veri
   await page.getByRole('button', { name: 'Вернуться к плейлистам' }).click()
   await expect(page.getByRole('button', { name: /Ночная прогулка/ })).toContainText('8 записей')
   page.once('dialog', (dialog) => dialog.accept())
-  await page.getByRole('button', { name: 'Очистить локальные демо-данные' }).click()
+  await reviewOption(page, 'Очистить локальные демо-данные')
   await expect(page.getByRole('alert')).toContainText('незавершённая операция')
 })

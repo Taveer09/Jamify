@@ -74,4 +74,40 @@ describe('Spotify API capability contracts', () => {
       .rejects.toMatchObject({ status: 429, retryAfter: 12 })
     expect(fetcher).toHaveBeenCalledTimes(1)
   })
+  it('shows followed and collaborative lists without weakening the mutation probe owner gate', async () => {
+    const fetcher=vi.fn<typeof fetch>().mockResolvedValue(json({items:[meta,{...meta,id:'followed',owner:{id:'other'}},{...meta,id:'collab',owner:{id:'other'},collaborative:true}],next:null,total:3}))
+    const lists=await new SpotifyApi(async ()=>'fixture',fetcher).libraryPlaylists('account')
+    expect(lists.map(p=>[p.id,p.readable])).toEqual([['playlist',true],['followed',false],['collab',true]])
+  })
+  it('paginates all saved tracks and preserves artist, artwork and unavailable entries',async()=>{
+    const fetcher=vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(json({items:[{track:{type:'track',uri:'A',name:'First',artists:[{name:'Artist'}],album:{images:[{url:'https://fixture.example/art.jpg'}]},duration_ms:123000}}],next:'https://api.spotify.com/v1/me/tracks?offset=1',total:2}))
+      .mockResolvedValueOnce(json({items:[{track:null}],next:null,total:2}))
+    const items=await new SpotifyApi(async ()=>'fixture',fetcher).savedTracks()
+    expect(items[0]).toMatchObject({uri:'A',artist:'Artist',imageUrl:'https://fixture.example/art.jpg',durationMs:123000,canPlay:true})
+    expect(items[1]).toMatchObject({uri:null,canPlay:false});expect(fetcher).toHaveBeenCalledTimes(2)
+  })
+  it('tries followed playlist reads and leaves the authorization verdict to Spotify',async()=>{
+    const collaborative={...meta,collaborative:true,owner:{id:'other'}}
+    const fetcher=vi.fn<typeof fetch>().mockResolvedValueOnce(json(collaborative)).mockResolvedValueOnce(json({items:[],next:null,total:0})).mockResolvedValueOnce(json(collaborative))
+    expect((await new SpotifyApi(async ()=>'fixture',fetcher).reviewSnapshot('playlist')).items).toEqual([])
+    const followedMeta={...meta,owner:{id:'other'}}
+    const followed=vi.fn<typeof fetch>().mockResolvedValueOnce(json(followedMeta)).mockResolvedValueOnce(json({items:[track('A')],next:null,total:1})).mockResolvedValueOnce(json(followedMeta))
+    expect((await new SpotifyApi(async ()=>'fixture',followed).reviewSnapshot('playlist')).items[0].uri).toBe('A')
+    expect(followed).toHaveBeenCalledTimes(3)
+  })
+
+  it('rechecks playback intent after token refresh before dispatching a command',async()=>{
+    let resolve!:(value:string)=>void;let current=true
+    const fetcher=vi.fn<typeof fetch>(),token=new Promise<string>(done=>{resolve=done})
+    const request=new SpotifyApi(()=>token,fetcher).request('me/player','PUT',{device_ids:['fixture']},()=>current)
+    const rejected=expect(request).rejects.toMatchObject({name:'AbortError'})
+    current=false;resolve('fixture');await rejected
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+  it('preserves only safe reason codes while retaining a definite404 status',async()=>{
+    const fetcher=vi.fn<typeof fetch>().mockResolvedValue(json({error:{status:404,reason:'NO_ACTIVE_DEVICE',message:'untrusted diagnostic'}},404))
+    await expect(new SpotifyApi(async()=>'fixture',fetcher).request('me/player','PUT',{})).rejects.toMatchObject({status:404,reason:'NO_ACTIVE_DEVICE',ambiguous:false})
+  })
+
 })

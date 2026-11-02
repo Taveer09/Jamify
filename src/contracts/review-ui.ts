@@ -8,6 +8,7 @@ export type ReviewCardHandle = {
 }
 
 export type ReviewCardProps = {
+  reviewKey?: string
   entry: Entry
   nextEntry?: Entry
   occurrences: number

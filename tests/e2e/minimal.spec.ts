@@ -1,0 +1,28 @@
+import { expect, test } from '@playwright/test'
+import { reviewOption } from './helpers/music'
+
+for(const width of [390,768,1440])test(`minimal review keeps decisions visible and secondary actions in menu at ${width}`,async({page})=>{
+  await page.setViewportSize({width,height:width===390?844:900})
+  await page.route('**/demo/*.wav',route=>route.abort())
+  await page.goto('/demo');await page.getByRole('button',{name:/Начать разбор/}).click()
+  await page.getByRole('button',{name:'Продолжить без звука'}).click()
+  await expect(page.locator('.decision-buttons .button:visible')).toHaveCount(2)
+  await expect(page.locator('footer')).toHaveCount(0)
+  await expect(page.getByRole('button',{name:'Подключить звук',exact:true})).not.toBeVisible()
+  await expect(page.getByRole('button',{name:'Проверить решения'})).not.toBeVisible()
+  await expect(page.getByRole('button',{name:'Очистить локальные демо-данные'})).not.toBeVisible()
+  for(const name of ['Убрать','Оставить'])await expect(page.getByRole('button',{name,exact:true})).toBeInViewport()
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+  await page.screenshot({path:`/tmp/jamify-minimal-${width}.png`,fullPage:true,animations:'disabled'})
+  await page.getByLabel('Ещё действия',{exact:true}).click()
+  await expect(page.getByRole('button',{name:'Проверить решения'})).toBeVisible()
+  await expect(page.getByRole('button',{name:'Очистить локальные демо-данные'})).toBeVisible()
+  await page.screenshot({path:`/tmp/jamify-minimal-menu-${width}.png`,fullPage:true,animations:'disabled'})
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button',{name:'Проверить решения'})).not.toBeVisible()
+  await expect(page.getByLabel('Ещё действия',{exact:true})).toBeFocused()
+  await page.locator('.track-details h2').click();await page.keyboard.press('ArrowRight')
+  await expect(page.locator('.session-progress > span')).toContainText('2 / 6')
+  await reviewOption(page,'Проверить решения')
+  await expect(page.getByRole('region',{name:'Предпросмотр изменений'})).toBeVisible()
+})

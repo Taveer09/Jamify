@@ -73,3 +73,31 @@ S6: очищенная private copy на demo gateway, keep-first в source orde
 Исправлены регрессии первоначальной реализации: быстрые кнопки теряли выбор; уход в другой плейлист терял pending выбор. Тесты восстановления теперь ожидают видимую смену карточки, а audio regression отслеживает настоящий Audio constructor без предположения о DOM audio. Pointer re-grab проверяется в видимой части статьи после scroll.
 
 Полный check156/156, type/lint/build pass; full Chromium/WebKit108/108 pass до финальной CSS правки ширины мобильной стопки и контраста disabled кнопки. Независимое Astra high review не нашло дополнительных подтверждённых дефектов; отдельно проверило pending→navigation/preview, Undo/reload в Chromium/WebKit и старт exit с текущего drag offset. Финальные snapshots390/768/1440 просмотрены, taste0 FAIL/0 WARN, Inter загружен. Дополнительный UI suite после CSS фиксируется в QA.md. Данные/audio вымышлены; live Spotify gate не изменился, физический touch not-run.
+
+## Desktop product revision — Spotify palette and full queue
+
+Текущая версия по прямым уточнениям пользователя: `/` открывает настоящий Spotify-вход/медиатеку, `/demo` — вымышленную музыку, `/diagnostics` — прежний S0. Добавлены чтение всех страниц, обложки/исполнители, Liked Songs и список сохранённых/совместных плейлистов с честным ограничением доступа. Старому grant могут понадобиться новые scopes. Живой smoke новой медиатеки в пользовательском аккаунте в этом изменении **not-run**; fixture API/SDK проверки — отдельно.
+
+Общая музыкальная сцена минимальна: обложка, плеер,2главных решения, дополнительные действия в меню и Undo. Последний запрос закрепил палитру Spotify #121212/#181818/#282828 и #1ed760, отменив светлую/бирюзовую версию. Физический swipe учитывает точку захвата, наклон, скорость и прерывание; стрелки/undo защищают фокус интерактивных элементов. Очередь больше не останавливается на25: все доступные уникальные треки в пределах существующего лимита загрузки10 000; неподдерживаемые записи объясняются счётчиком.
+
+Live решения привязаны к аккаунту/списку, сохраняются в localStorage и экспортируются JSON. При blocked storage — память вкладки с предупреждением и сохранением при переключении источников. Наблюдаемый URI используется только как reviewKey, sourceUri=null/identity ambiguous; coordinator реального удаления/копии не подключён. DELETE unknown по-прежнему не повторялся, основные плейлисты не менялись. Seek в live пока отключён; SDK подтверждает только фактический совпавший URI.
+
+Проверено локально: `npm run check` — type/lint/build +167 unit/capability/domain/apply; полный Chromium/WebKit suite126/126. В том числе:70-entry API pagination,27 решений и reload/export без playlist/library writes; 25→26 в демо без применения;205 реальных draft-решений проходят fake DELETE batches100/100/5; blocked storage/logout/stale responses/wrong actual URI. Промежуточный совместный запуск unit/e2e перегрузил машину и дал3 таймаута; последующий отдельный check прошёл4.2s. Full e2e прошёл1.5m. Новые живые Spotify mutations не выполнялись.
+
+Визуально просмотрены390/768/1440, welcome/menu/preview и карточки; contrast/overflow без ошибок. Независимый finish reviewer: ship по шести рендерам, небольшая найденная ошибка склонения preview исправлена. Не считать screenshot/headless проверкой физической слышимости музыки или live удалений. Ночной branch сохраняется, merge/deploy не выполняется.
+
+## Продолжение и подготовка публикации, 2026-11-02
+
+Исправлена последовательность запуска Spotify: после SDK ready приложение явно переводит playback на собственный Jamify device, подтверждает active device ограниченными GET-запросами и только затем включает выбранный URI. Команды не повторяются автоматически.404 сохраняет SDK для явного повторного подключения; ошибки понятны без HTTP-абзаца. Pause отправляется SDK сразу, intent перепроверяется после refresh token и на этапах transfer/read/start; SDK error отменяет pending play.
+
+Убрана ошибочная локальная блокировка чтения по owner/collaborative: read-only экран спрашивает сам Spotify, доступен ли выбранный сохранённый плейлист. Реальный403 имеет отдельное объяснение, без бесполезного переподключения; liked403/401 по-прежнему дают reconsent. S0 stableSnapshot и ограничения реальных записей не ослаблены.
+
+Пользователь попросил минимальный сайт: две основные кнопки, плеер и Undo; вторичные действия скрыты в меню. Новые regression checks покрывают скрытые действия/keyboard/menu, возвращение звука после silent mode, устройство404 и явный retry, чужой owner с разрешённым API read, отмены во времяtransfer/read/refresh. npm run check175/175 unit + type/lint/build pass; полный e2e138/138 Chromium/WebKit pass. Промежуточный suite133/136 выявил race тестового helper при переходе chooser→review; helper теперь ждёт region, повторы полностью прошли.
+
+Публикация на Vercel явно разрешена новым запросом. Создан проект Jamify в существующем аккаунте, настроен только публичный Spotify Client ID дляproduction; secrets/.env не отправляются. SPA routes/favicon/headers подготовлены. Итоговый URL и production smoke фиксируются после фактического деплоя. Новая реальная Spotify-аудиопроба not-run: Safari не разрешил JavaScript inspection; эту настройку не меняли. DELETEunknown не повторяли.
+
+### Публикация подтверждена
+
+https://jamify-lyart.vercel.app — production READY, опубликован CLI из commit1ca4bde, deployment dpl_9nSiLebUo9jhyU12SYonda7G8hS7. Неавторизованные HTTP запросы к /, /demo, /callback, /diagnostics вернули200, favicon —200image/svg+xml. Production browser smoke на390px подтвердил загруженный публичный Client ID, точный redirect https://jamify-lyart.vercel.app/callback, реальное воспроизведение собственного demo WAV через browser playing event, ArrowRight/Undo, отсутствие pageerror и horizontaloverflow. Запрос авторизации перехвачен до Spotify; реальный productionOAuth/playback не выдаётся за проверенный.
+
+Пользователю осталось зарегистрировать новый HTTPS redirect в Spotify Dashboard. Деплой и push ночной ветки выполнены по новому прямому запросу; main не объединялся. Только public config добавлен вproduction; .env/refresh/access/OIDC credentials не публиковались.
