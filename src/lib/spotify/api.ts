@@ -19,7 +19,8 @@ export class SpotifyError extends Error {
   readonly status: number | null
   readonly retryAfter: number | null
   readonly ambiguous: boolean
-  constructor(status: number | null, retryAfter: number | null, ambiguous: boolean) {
+  readonly reason: string | null
+  constructor(status: number | null, retryAfter: number | null, ambiguous: boolean, reason: string | null = null) {
     const hint = status === 403 ? 'Проверь Premium, allowlist и разрешения приложения.'
       : status === 429 ? 'Лимит запросов. Повтори проверку позже.'
         : status === 401 ? 'Подключи Spotify ещё раз.'
@@ -29,6 +30,7 @@ export class SpotifyError extends Error {
     this.status = status
     this.retryAfter = retryAfter
     this.ambiguous = ambiguous
+    this.reason = reason
   }
 }
 
@@ -77,9 +79,10 @@ export function canonical(items: ObservedItem[]): string {
 export class SpotifyApi {
   constructor(private token: () => Promise<string>, private fetcher: typeof fetch = globalThis.fetch.bind(globalThis)) {}
 
-  async request(path: string, method = 'GET', body?: unknown): Promise<unknown> {
+  async request(path: string, method = 'GET', body?: unknown, mayDispatch?: () => boolean): Promise<unknown> {
     const url = apiUrl(path)
     const accessToken = await this.token()
+    if (mayDispatch && !mayDispatch()) throw new DOMException('Команда отменена.', 'AbortError')
     let result: { response: Response; body: unknown }
     try {
       result = await withRequestTimeout(async (signal) => {
@@ -87,7 +90,7 @@ export class SpotifyApi {
           method, headers: { Authorization: `Bearer ${accessToken}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
           body: body === undefined ? undefined : JSON.stringify(body), signal,
         })
-        return { response, body: response.ok && response.status !== 204 ? await response.json() : null }
+        return { response, body: response.status === 204 ? null : response.ok ? await response.json() : await response.json().catch(() => null) }
       })
     } catch {
       throw new SpotifyError(null, null, method !== 'GET')
@@ -96,7 +99,9 @@ export class SpotifyApi {
     if (!response.ok) {
       const header = response.headers.get('Retry-After')
       const seconds = header === null ? NaN : Number(header)
-      throw new SpotifyError(response.status, Number.isFinite(seconds) ? seconds : null, method !== 'GET' && response.status >= 500)
+      // Keep only recognized reason codes, never arbitrary server messages or credentials.
+      const errorBody = z.object({ error: z.object({ reason: z.enum(['NO_ACTIVE_DEVICE', 'DEVICE_NOT_FOUND', 'PREMIUM_REQUIRED', 'RESTRICTION_VIOLATED', 'TRACK_NOT_PLAYABLE']).optional() }) }).safeParse(result.body)
+      throw new SpotifyError(response.status, Number.isFinite(seconds) ? seconds : null, method !== 'GET' && response.status >= 500, errorBody.success ? errorBody.data.error.reason ?? null : null)
     }
     return result.body
   }
@@ -146,13 +151,14 @@ export class SpotifyApi {
     })
   }
 
-  async reviewSnapshot(id: string, accountId: string): Promise<PlaylistSnapshot> {
+  async reviewSnapshot(id: string): Promise<PlaylistSnapshot> {
     for (let attempt = 0; attempt < 2; attempt++) {
       const before = await this.playlist(id)
-      if (before.owner.id !== accountId && !before.collaborative) throw new Error('Spotify разрешает читать треки только в своих и совместных плейлистах. Этот плейлист виден в медиатеке, но его треки недоступны приложению.')
+      // Library ownership is not an authorization verdict. Ask Spotify for read access;
+      // existing/extended grants may read followed playlists too. Mutation probe stays strict.
       const items = (await this.collect(`playlists/${encodeURIComponent(id)}/items?limit=50&additional_types=track,episode`)).map(parseObservedItem)
       const after = await this.playlist(id)
-      if (after.owner.id !== accountId && !after.collaborative) throw new Error('Доступ к плейлисту изменился.')
+      if (before.owner.id !== after.owner.id || before.collaborative !== after.collaborative) throw new Error('Права плейлиста изменились во время загрузки. Попробуй ещё раз.')
       if (before.snapshot_id === after.snapshot_id) return { playlist: after, items }
     }
     throw new Error('Плейлист меняется во время загрузки. Попробуй ещё раз.')

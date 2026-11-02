@@ -1,7 +1,20 @@
 import type { Entry, PlaybackGateway, PlaybackState } from '../../contracts'
 import { BrowserPlayer } from './sdk'
 import type { PlayerNotice } from './sdk'
+import { SpotifyError } from '../spotify/api'
 import type { SpotifyApi } from '../spotify/api'
+
+function playbackMessage(error: unknown): string {
+  if (error instanceof SpotifyError) {
+    if (error.status === 404) return 'Spotify не нашёл плеер. Подключи звук ещё раз.'
+    if (error.status === 401) return 'Сессия Spotify истекла. Переподключи аккаунт.'
+    if (error.reason === 'PREMIUM_REQUIRED') return 'Для прослушивания нужен Spotify Premium.'
+    if (error.status === 403) return 'Spotify не разрешил включить музыку. Переподключи аккаунт и проверь доступ приложения.'
+    if (error.status === 429) return 'Слишком много запросов к Spotify. Попробуй чуть позже.'
+    return 'Не удалось связаться с плеером Spotify. Проверь подключение и попробуй ещё раз.'
+  }
+  return error instanceof Error ? error.message : 'Не удалось включить звук. Попробуй ещё раз.'
+}
 
 export class SpotifyPlaybackGateway implements PlaybackGateway {
   private state:PlaybackState={requestedUri:null,actualUri:null,generation:0,status:'idle',positionMs:0,durationMs:0}
@@ -17,7 +30,7 @@ export class SpotifyPlaybackGateway implements PlaybackGateway {
   private enqueue(job:()=>Promise<void>){const result=this.serial.then(job);this.serial=result.catch(()=>{});return result}
   private notice=(notice:PlayerNotice)=>{
     if(this.disposed)return
-    if(notice.state==='error'){this.ready=false;this.publish({status:'error',actualUri:null,message:notice.message});return}
+    if(notice.state==='error'){this.intent++;this.desired=false;this.ready=false;this.publish({status:'error',actualUri:null,message:notice.message});return}
     if(notice.state==='playing'){
       if(this.desired&&notice.uri===this.state.requestedUri)this.publish({status:'playing',actualUri:notice.uri,positionMs:notice.positionMs??0,durationMs:notice.durationMs??this.state.durationMs,message:undefined})
       else this.publish({status:'idle',actualUri:null,message:'Spotify сообщает о другом треке. Нажми «Слушать», чтобы включить текущий.'})
@@ -30,6 +43,7 @@ export class SpotifyPlaybackGateway implements PlaybackGateway {
     if(this.disposed)return
     this.intent++;this.desired=false
     this.publish({requestedUri:entry.playbackUri,actualUri:null,generation:this.state.generation+1,status:'idle',positionMs:0,durationMs:entry.durationMs??0,message:undefined})
+    void this.player?.pause().catch(()=>{})
     void this.enqueue(async()=>{if(this.ready)await this.player?.pause()}).catch(()=>{})
   }
   async play(){
@@ -50,11 +64,11 @@ export class SpotifyPlaybackGateway implements PlaybackGateway {
         const activated=await activation
         if(!activated.ok)throw activated.error
         if(this.disposed||intent!==this.intent||!this.desired)return
-        await this.player!.play(uri,this.api)
+        await this.player!.play(uri,this.api,()=>!this.disposed&&intent===this.intent&&this.desired)
       })
-    }catch(error){if(!this.disposed&&intent===this.intent){this.ready=false;this.player?.disconnect();this.player=null;this.publish({status:'error',actualUri:null,message:error instanceof Error?error.message:'Не удалось включить Spotify. Нажми «Слушать» ещё раз.'})}}
+    }catch(error){if(!this.disposed&&intent===this.intent){this.desired=false;this.publish({status:'error',actualUri:null,message:playbackMessage(error)})}}
   }
-  pause(){this.intent++;this.desired=false;if(!this.disposed)this.publish({status:'paused',actualUri:null});return this.enqueue(async()=>{await this.player?.pause()}).catch(()=>{})}
+  pause(){this.intent++;this.desired=false;if(!this.disposed)this.publish({status:'paused',actualUri:null,message:undefined});void this.player?.pause().catch(()=>{});return this.enqueue(async()=>{await this.player?.pause()}).catch(()=>{})}
   seek(positionMs:number){if(!this.ready||!Number.isFinite(positionMs))return;const position=Math.round(Math.max(0,Math.min(positionMs,this.state.durationMs)));void this.enqueue(async()=>{await this.api.request(`me/player/seek?position_ms=${position}`,'PUT')}).catch(()=>{this.publish({message:'Не удалось перемотать трек.'})})}
   subscribe(fn:(state:PlaybackState)=>void){this.listeners.add(fn);fn({...this.state});return()=>{this.listeners.delete(fn)}}
   dispose(){this.disposed=true;this.intent++;this.desired=false;this.player?.disconnect();this.player=null;this.listeners.clear()}

@@ -104,11 +104,11 @@ describe('browser playback capability contracts', () => {
     const notices: PlayerNotice[] = []
     const player = new BrowserPlayer(async () => 'fixture-token', (notice) => notices.push(notice))
     await player.connect()
-    const request = vi.fn().mockResolvedValue(null)
+    const request = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce({device:{id:'fixture-device',is_active:true}}).mockResolvedValue(null)
     const playing = player.play('spotify:track:requested', { request } as unknown as SpotifyApi)
     expect(FakePlayer.instances[0].activateElement).toHaveBeenCalledTimes(1)
     await playing
-    expect(request).toHaveBeenCalledWith('me/player/play?device_id=fixture-device', 'PUT', { uris: ['spotify:track:requested'] })
+    expect(request.mock.calls.map(call=>call.slice(0,3))).toEqual([['me/player','PUT',{device_ids:['fixture-device'],play:false}],['me/player','GET',undefined],['me/player/play?device_id=fixture-device','PUT',{uris:['spotify:track:requested']}]])
     expect(notices).toEqual([{ state: 'ready' }])
     player.disconnect()
   })

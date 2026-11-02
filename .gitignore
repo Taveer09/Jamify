@@ -11,3 +11,6 @@ playwright-report/
 *.local
 
 docs/media/raw/
+
+.vercel/
+.vercel

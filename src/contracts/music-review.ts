@@ -1,7 +1,8 @@
-import type { Ref } from 'react'
+import type { ReactNode, Ref } from 'react'
 import type { Decision, Entry, PlaybackState } from './index'
 import type { ReviewCardHandle } from './review-ui'
 export type MusicReviewProps = {
+  menuExtras?: ReactNode
   reviewKey?: string
   entry?: Entry; nextEntry?: Entry; occurrences: number; playlistName: string
   cursor: number; total: number; busy: boolean; decisionPending: boolean

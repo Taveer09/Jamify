@@ -61,3 +61,9 @@ Final CSS check: npm run check156/156 pass; targeted review-ui Chromium/WebKit32
 - Domain queue3200unique/10000source entries проходит25→26 без окна.205 согласованных draft-removals проверены последовательными fake batches100/100/5, full ordered read-back и finalization. Existing forged150request по-прежнему не отправляет mutation.
 - Review обнаружил stale playing confirmation, unhandled activation rejection, blocked localStorage read и исчезающие unsupported entries; подтверждённые случаи исправлены, regression tests добавлены. Независимый UI finish review: ship по шести снимкам.
 - Новый live продукт в реальном аккаунте: not-run в этой ревизии. Исторические Safari OAuth/SDK actual URI pass и DELETE unknown остаются прежними. Mobile physical audio, relinking/source proof, production apply — открыты.
+
+## Playback recovery and minimal release, 2026-11-02
+
+Check175unit/capability/domain/apply +types/lint/build pass. Full Chromium/WebKit138/138 pass. New tests coverSDK error duringtransfer/readiness, immediatepause duringpendingread, post-refresh cancellation beforedispatch, boundedreadiness polling, sameSDK404manualretry and zero playlist/librarywrites. Read-only followedplaylist is nowtested bothAPIallowed andserver403 instead ofa guessedowner verdict.
+
+Minimal screenshots390/768/1440 andmenus inspected; actionsfitfirstfold. No footer/always-visible secondarybuttons. Healthy save state is screenreader-only; errors/storagewarnings/safety note remainvisible. Menu/Escape/focus and explicit silent→audio transition verified. Real userSpotifynewplayback remainsnot-run, historicalunknownDELETEunchanged. Production smoke is appended afterdeployment.

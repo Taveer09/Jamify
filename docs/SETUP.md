@@ -18,3 +18,7 @@
 HTTP 403: проверь allowlist, Premium, доступность endpoint и разрешения; отсутствие поля product в `/me` не означает Free. HTTP 429: дождись окончания лимита. Ошибка Redirect URI: проверь точное совпадение, порт 5173 и `127.0.0.1` вместо `localhost`.
 
 Локальные сценарии подключения проверяются в Chromium и WebKit. Нативный fetch отдельно проверен в Safari; браузерный звук, мобильный Spotify playback и relinking требуют отдельных живых проб. Никакие разрешения браузера/аккаунта не обходятся.
+
+## Production на Vercel
+
+Для production нужен публичный Client ID в VITE_SPOTIFY_CLIENT_ID; Client Secret не нужен. Redirect URI по умолчанию берётся из текущего origin + /callback. Не переносите локальный VITE_SPOTIFY_REDIRECT_URI=http://127.0.0.1:5173/callback вproduction: зарегистрируйте точный HTTPS адрес опубликованного сайта в Spotify Dashboard. Vercel rewrites сохраняют /demo, /callback и /diagnostics при прямом открытии. Локальные .env и OAuthданные вupload не входят.

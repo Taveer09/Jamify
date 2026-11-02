@@ -1,3 +1,4 @@
+import { reviewOption } from './helpers/music'
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
@@ -273,7 +274,7 @@ test('exit stays on its track, undo cancels the first pending choice and buttons
   await page.locator('.track-card-motion').evaluate((node) => node.getAnimations().forEach((animation) => animation.finish()))
   await expect(page.locator('.session-progress > span')).toContainText('2 / 6')
   await expect(page.locator('.track-details h2')).not.toHaveText(title)
-  await page.getByRole('button', { name: /Проверить решения/ }).first().click()
+  await reviewOption(page, 'Проверить решения')
   await expect(page.locator('.preview-list li')).toHaveCount(1)
 })
 

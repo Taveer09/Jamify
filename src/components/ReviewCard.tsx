@@ -191,7 +191,7 @@ export function ReviewCard({ reviewKey, entry, nextEntry, occurrences, canDecide
       {nextEntry && <div ref={next} className="next-card" aria-hidden="true">{nextEntry.imageUrl && <img src={nextEntry.imageUrl} alt="" draggable="false" />}</div>}
       <div ref={motion} className="track-card-motion">
         {entry.imageUrl ? <img className="album-cover" src={entry.imageUrl} alt={`Обложка: ${entry.title}`} width="320" height="320" draggable="false" /> : <div className="album-cover album-placeholder" aria-label="Обложка недоступна">Нет обложки</div>}
-        <div className="track-details"><p className="small">{occurrences} {occurrences % 10 === 1 && occurrences % 100 !== 11 ? 'вхождение' : [2, 3, 4].includes(occurrences % 10) && ![12, 13, 14].includes(occurrences % 100) ? 'вхождения' : 'вхождений'} в плейлисте</p><h2>{entry.title}</h2><p>{entry.artist}</p>
+        <div className="track-details">{occurrences > 1 && <p className="small">{occurrences} {occurrences % 10 === 1 && occurrences % 100 !== 11 ? 'вхождение' : [2, 3, 4].includes(occurrences % 10) && ![12, 13, 14].includes(occurrences % 100) ? 'вхождения' : 'вхождений'} в плейлисте</p>}<h2>{entry.title}</h2><p>{entry.artist}</p>
           {entry.spotifyUrl && <a className="track-attribution" href={entry.spotifyUrl} target="_blank" rel="noopener noreferrer">Открыть в Spotify <span aria-hidden="true">↗</span></a>}
         </div>
       </div>

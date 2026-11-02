@@ -43,13 +43,14 @@ export class BrowserPlayer {
   private deviceId: string | null = null
   private disposed = false
   private cancelConnect: (() => void) | null = null
+  private active = false
   constructor(private token: () => Promise<string>, private notify: (notice: PlayerNotice) => void) {}
 
   async connect(): Promise<void> {
     const sdk = await loadSdk()
     if (this.disposed) return
     const player = new sdk.Player({
-      name: 'Jamify — проверка подключения', volume: 0.3,
+      name: 'Jamify', volume: 0.3,
       getOAuthToken: (callback) => {
         if (this.disposed) return
         void this.token().then((token) => { if (!this.disposed) callback(token) })
@@ -76,6 +77,7 @@ export class BrowserPlayer {
       player.addListener('not_ready', () => {
         if (this.disposed) return
         this.deviceId = null
+        this.active = false
         this.notify({ state: 'error', message: 'Устройство Spotify отключено.' })
       })
       for (const event of ['initialization_error', 'authentication_error', 'account_error', 'playback_error', 'autoplay_failed']) {
@@ -100,18 +102,41 @@ export class BrowserPlayer {
 
   activate(): Promise<void> { return this.player?.activateElement() ?? Promise.resolve() }
 
-  async play(uri: string, api: SpotifyApi): Promise<void> {
+  async play(uri: string, api: SpotifyApi, isCurrent: () => boolean = () => true): Promise<void> {
     if (!this.player || !this.deviceId) throw new Error('Сначала подключи плеер.')
     // Called synchronously from a click, before the first await (browser autoplay policy).
     const activation = this.player.activateElement()
     await activation
-    if (this.disposed || !this.player || !this.deviceId) throw new Error('Плеер отключён. Подключи его заново.')
-    await api.request(`me/player/play?device_id=${encodeURIComponent(this.deviceId)}`, 'PUT', { uris: [uri] })
+    const mayDispatch = () => !this.disposed && Boolean(this.player && this.deviceId) && isCurrent()
+    if (!mayDispatch()) return
+    const deviceId = this.deviceId!
+    if (!this.active) {
+      // SDK ready registers a Connect device; transfer makes it the playback target.
+      // Transfer once, then poll reads only. Never repeat an uncertain player command.
+      await api.request('me/player', 'PUT', { device_ids: [deviceId], play: false }, mayDispatch)
+      for (let attempt = 0; attempt < 6; attempt++) {
+        if (!mayDispatch()) return
+        const state = z.object({ device: z.object({ id: z.string().nullable(), is_active: z.boolean() }).nullable().optional() }).nullable()
+          .safeParse(await api.request('me/player', 'GET', undefined, mayDispatch))
+        if (!mayDispatch()) return
+        if (state.success && state.data?.device?.id === deviceId && state.data.device.is_active) { this.active = true; break }
+        if (attempt < 5) await new Promise<void>((resolve) => window.setTimeout(resolve, 300))
+      }
+      if (!this.active) throw new Error('Spotify ещё не подключил звук. Нажми «Подключить звук» ещё раз.')
+    }
+    if (!mayDispatch()) return
+    try {
+      await api.request(`me/player/play?device_id=${encodeURIComponent(deviceId)}`, 'PUT', { uris: [uri] }, mayDispatch)
+    } catch (error) {
+      this.active = false
+      throw error
+    }
   }
   async pause(): Promise<void> { await this.player?.pause() }
   disconnect(): void {
     this.disposed = true
     this.cancelConnect?.(); this.cancelConnect = null
     this.player?.disconnect(); this.player = null; this.deviceId = null
+    this.active = false
   }
 }

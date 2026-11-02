@@ -2,8 +2,9 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { reviewOption } from './helpers/music'
 
-async function fixture(page:Page, options:{deniedLiked?:boolean;holdItems?:Promise<void>}={}){
+async function fixture(page:Page, options:{deniedLiked?:boolean;denyFollowed?:boolean;failFirstPlay?:boolean;holdItems?:Promise<void>}={}){
   const writes:Array<{path:string;method:string}>=[]
+  let playAttempts=0
   const track=(index:number)=>({track:{type:'track',uri:`spotify:track:${String(index).padStart(22,'0')}`,name:`Track ${index}`,artists:[{name:'Fixture artist'}],duration_ms:180000,album:{images:[]}}})
   await page.addInitScript(()=>{
     sessionStorage.setItem('jamify.oauth.refresh.v1',JSON.stringify({clientId:'a'.repeat(32),refreshToken:'fixture-refresh'}))
@@ -30,12 +31,16 @@ async function fixture(page:Page, options:{deniedLiked?:boolean;holdItems?:Promi
     if(path==='playlists/owned')return route.fulfill({json:metadata('owned')})
     if(path==='playlists/followed')return route.fulfill({json:metadata('followed')})
     if(path==='me/tracks'&&options.deniedLiked)return route.fulfill({status:403,json:{error:{status:403}}})
-    if(path==='playlists/owned/items'||path==='me/tracks'){
+    if(path==='playlists/followed/items'&&options.denyFollowed!==false)return route.fulfill({status:403,json:{error:{status:403}}})
+    if(path==='playlists/owned/items'||path==='playlists/followed/items'||path==='me/tracks'){
       await options.holdItems
       const offset=Number(url.searchParams.get('offset')||0),total=70,end=Math.min(total,offset+50)
       return route.fulfill({json:{items:Array.from({length:end-offset},(_,i)=>track(offset+i)),next:end<total?`https://api.spotify.com/v1/${path}?offset=${end}`:null,total}})
     }
+    if(path==='me/player')return method==='PUT'?route.fulfill({status:204}):route.fulfill({json:{device:{id:'fixture-device',is_active:true}}})
     if(path==='me/player/play'){
+      playAttempts++
+      if(options.failFirstPlay&&playAttempts===1)return route.fulfill({status:404,json:{error:{status:404,reason:'NO_ACTIVE_DEVICE'}}})
       const uri=request.postDataJSON().uris[0]
       await page.evaluate(uri=>window.dispatchEvent(new CustomEvent('fixture-playback',{detail:uri})),uri)
       return route.fulfill({status:204})
@@ -59,7 +64,7 @@ test('real-library route paginates all tracks, reviews past25, restores and expo
   for(let i=0;i<27;i++)await page.keyboard.press(i%2?'ArrowRight':'ArrowLeft')
   await expect(page.locator('.session-progress > span')).toHaveText('28 / 70')
   const next=await page.locator('.track-details h2').innerText()
-  await page.getByRole('button',{name:'Проверить решения'}).click()
+  await reviewOption(page, 'Проверить решения')
   await expect(page.getByText('Треки в Spotify не удалялись.',{exact:false})).toBeVisible()
   const download=page.waitForEvent('download');await page.getByRole('button',{name:'Скачать решения'}).click()
   expect((await download).suggestedFilename()).toBe('jamify-review.json')
@@ -67,7 +72,7 @@ test('real-library route paginates all tracks, reviews past25, restores and expo
   await page.getByRole('button',{name:/Моя музыка/}).click()
   await expect(page.locator('.track-details h2')).toHaveText(next)
   await expect(page.locator('.session-progress > span')).toHaveText('28 / 70')
-  expect(writes.every(write=>write.method==='PUT'&&write.path==='me/player/play')).toBe(true)
+  expect(writes.every(write=>write.method==='PUT'&&['me/player','me/player/play'].includes(write.path))).toBe(true)
 })
 
 test('liked tracks ask for reconsent when old grant lacks scope',async({page})=>{
@@ -81,7 +86,9 @@ test('liked tracks ask for reconsent when old grant lacks scope',async({page})=>
 test('saved followed playlists are visible and explain Spotify item-access restriction',async({page})=>{
   const {writes}=await fixture(page)
   await page.goto('/');await page.getByRole('button',{name:/Чужой сохранённый/}).click()
-  await expect(page.getByRole('alert')).toContainText('его треки недоступны')
+  await expect(page.getByRole('alert')).toContainText('Spotify отказал в чтении')
+  await expect(page.getByRole('button',{name:'Переподключить Spotify'})).not.toBeVisible()
+  await expect(page.getByRole('link',{name:'Открыть плейлист в Spotify'})).toBeVisible()
   expect(writes).toEqual([])
 })
 
@@ -126,4 +133,29 @@ for(const width of [390,768,1440])test(`Spotify product entry fits ${width}px`,a
   await expect(page.getByRole('button',{name:'Войти через Spotify'})).toBeInViewport()
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
   expect(requests).toEqual([])
+})
+
+
+test('followed playlists load when Spotify allows their items, without a local ownership veto',async({page})=>{
+  const {writes}=await fixture(page,{denyFollowed:false})
+  await page.goto('/');await page.getByRole('button',{name:/Чужой сохранённый/}).click()
+  await expect(page.getByRole('article',{name:'Текущий трек'})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Чужой сохранённый'})).toBeVisible()
+  await expect(page.locator('.session-progress > span')).toHaveText('1 / 70')
+  await expect(page.getByRole('status')).toContainText('Играет текущий трек')
+  expect(writes.every(write=>write.method==='PUT'&&['me/player','me/player/play'].includes(write.path))).toBe(true)
+})
+
+test('404 offers explicit reconnect, retains the device, and retries playback only on click',async({page})=>{
+  const {writes}=await fixture(page,{failFirstPlay:true})
+  await page.goto('/');await page.getByRole('button',{name:/Моя музыка/}).click()
+  await expect(page.getByRole('status')).toContainText('Spotify не нашёл плеер')
+  await expect(page.getByRole('status')).not.toContainText('HTTP')
+  await expect(page.getByRole('button',{name:'Оставить',exact:true})).toBeDisabled()
+  expect(writes.filter(write=>write.path==='me/player/play')).toHaveLength(1)
+  await page.getByRole('button',{name:'Подключить звук',exact:true}).click()
+  await expect(page.getByRole('status')).toContainText('Играет текущий трек')
+  expect(writes.filter(write=>write.path==='me/player/play')).toHaveLength(2)
+  expect(writes.filter(write=>write.path==='me/player')).toHaveLength(2)
+  await expect(page.getByRole('button',{name:'Оставить',exact:true})).toBeEnabled()
 })

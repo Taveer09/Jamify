@@ -28,6 +28,8 @@ export function DemoApp() {
   const [player, setPlayer] = useState(initialPlayback)
   const [heardUri, setHeardUri] = useState<string | null>(null)
   const [withoutSound, setWithoutSound] = useState(false)
+  const silentRef = useRef(false)
+  function setSoundMode(value: boolean) { silentRef.current = value; setWithoutSound(value) }
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([])
   const [selected, setSelected] = useState('night-drive')
   const baseline = sessionState.baseline
@@ -62,8 +64,8 @@ export function DemoApp() {
   useEffect(() => {
     if (screen !== 'review' || !current) { playback.pause(); return }
     playback.select(current)
-    if (autoplay.current && !withoutSound) void playback.play()
-  }, [current, playback, screen, withoutSound])
+    if (autoplay.current && !silentRef.current) void playback.play()
+  }, [current, playback, screen])
 
   async function start() {
     setBusy(true); setError('')
@@ -81,7 +83,7 @@ export function DemoApp() {
       }
       setOperation(null)
       await controller.open(loaded, Date.now(), false, Boolean(gateway.storageWarning))
-      setHeardUri(null); setWithoutSound(false)
+      setHeardUri(null); setSoundMode(false)
       setScreen('review'); autoplay.current = true
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Не удалось открыть демо.') }
     finally { setBusy(false) }
@@ -163,21 +165,21 @@ export function DemoApp() {
   const inaccessible = baseline ? baseline.orderedEntries.filter((entry) => !entry.canPlay).length : 0
 
   return <div className={`demo-shell music-shell${screen === 'review' ? ' music-review-page' : ''}`}>
-    <header className="demo-header"><a className="wordmark" href="/demo"><Mark /><span>Jamify</span></a><nav aria-label="Режим приложения"><span aria-current="page">Демо</span><a href="/">Мой Spotify</a></nav></header>
+    <header className="demo-header"><a className="wordmark" href="/demo"><Mark /><span>Jamify</span></a><nav aria-label="Режим приложения"><span aria-current="page">Демо</span>{screen !== 'review' && <details className="account-menu"><summary>Меню</summary><div className="account-actions"><a href="/">Мой Spotify</a><button className="text-button" disabled={busy} onClick={() => void clearLocalData()}>Очистить локальные демо-данные</button></div></details>}</nav></header>
     <main className={screen === 'preview' || screen === 'result' ? 'demo-main confirmation-main' : 'demo-main'}>
-      {screen !== 'review' && <div className="demo-title"><div><h1>{screen === 'choose' ? 'Плейлисту пора выдохнуть.' : screen === 'preview' ? 'Последний взгляд.' : screen === 'result' ? result?.state === 'complete' ? 'Готово. Стало легче.' : 'Проверим результат.' : 'Оставь то, что откликается.'}</h1></div><p className="demo-label">Демо без аккаунта</p></div>}
+      {screen !== 'review' && <div className="demo-title"><div><h1>{screen === 'choose' ? 'Выбери плейлист.' : screen === 'preview' ? 'Последний взгляд.' : screen === 'result' ? result?.state === 'complete' ? 'Готово. Стало легче.' : 'Проверим результат.' : 'Оставь то, что откликается.'}</h1></div><p className="demo-label">Демо без аккаунта</p></div>}
       {error && <p className="feedback error" role="alert">{error}</p>}
       {(sessionState.error || gateway.storageWarning) && <p className="feedback error" role="alert">{sessionState.error || gateway.storageWarning}</p>}
-      {screen === 'choose' ? <div className="demo-chooser"><section aria-labelledby="choose-title"><h2 id="choose-title">С чего начнём?</h2><p className="description">Выбери вымышленный плейлист. Переслушай, оставь любимое и убери лишнее — реальные данные Spotify это не затронет.</p><div className="playlist-options">{playlists.map((playlist, index) => <button key={playlist.id} type="button" className={selected === playlist.id ? 'playlist-option selected' : 'playlist-option'} aria-pressed={selected === playlist.id} disabled={busy} onClick={() => setSelected(playlist.id)}><span className="playlist-index">{String(index + 1).padStart(2, '0')}</span><span><strong>{playlist.name}</strong><span>{playlist.count.toLocaleString('ru-RU')} записей</span></span><span aria-hidden="true">{selected === playlist.id ? '●' : '○'}</span></button>)}</div><button className="button primary" disabled={busy || !selectedPlaylist} onClick={() => void start()}>Начать разбор <span aria-hidden="true">→</span></button></section><aside className="demo-explainer"><img src="/demo/slate.svg" alt="Собственная демо-обложка Jamify Lab" width="320" height="320" /><h2>Один трек. Одно решение.</h2><p>Оставить, убрать или пропустить. До применения любое решение можно отменить.</p><p className="field-hint">Имена вымышлены. Короткие аудиофрагменты созданы для демо.</p></aside></div> : null}
+      {screen === 'choose' ? <div className="demo-chooser"><section aria-labelledby="choose-title"><h2 id="choose-title">С чего начнём?</h2><p className="description">Попробуй свайпы на вымышленной музыке. Spotify это не затронет.</p><div className="playlist-options">{playlists.map((playlist, index) => <button key={playlist.id} type="button" className={selected === playlist.id ? 'playlist-option selected' : 'playlist-option'} aria-pressed={selected === playlist.id} disabled={busy} onClick={() => setSelected(playlist.id)}><span className="playlist-index">{String(index + 1).padStart(2, '0')}</span><span><strong>{playlist.name}</strong><span>{playlist.count.toLocaleString('ru-RU')} записей</span></span><span aria-hidden="true">{selected === playlist.id ? '●' : '○'}</span></button>)}</div><button className="button primary" disabled={busy || !selectedPlaylist} onClick={() => void start()}>Начать разбор <span aria-hidden="true">→</span></button></section></div> : null}
       {screen === 'review' ? <>
-        <MusicReview entry={current} nextEntry={review.cursor + 1 < windowSize ? entriesByUri.get(review.queue[review.cursor + 1]) : undefined} occurrences={copies} playlistName={baseline?.playlistName ?? 'Демо-плейлист'} cursor={review.cursor} total={windowSize} busy={busy} decisionPending={decisionPending} canDecide={mayDecide} canUndo={decisionPending || Boolean(review.history.length)} withoutSound={withoutSound} playback={player} soundLabel={withoutSound ? 'Без звука' : confirmed ? 'Играет текущий трек · демо-фрагмент' : player.message || (player.status === 'loading' ? 'Загружаем звук…' : 'Звук на паузе')} cardRef={cardHandle} onPendingChange={setDecisionPending} onDecisionCommit={decide} onDecision={requestDecision} onUndo={undo} onTogglePlayback={() => { if (mayPause) { autoplay.current = false; playback.pause() } else { autoplay.current = true; void playback.play() } }} onSeek={(position) => playback.seek(position)} onSilent={() => { autoplay.current = false; playback.pause(); setWithoutSound(true) }} onFinish={() => void preview()} onBack={() => { cardHandle.current?.finish(); setScreen('choose') }} />
+        <MusicReview menuExtras={<><a href="/">Мой Spotify</a><button type="button" disabled={busy} onClick={() => void clearLocalData()}>Очистить локальные демо-данные</button></>} entry={current} nextEntry={review.cursor + 1 < windowSize ? entriesByUri.get(review.queue[review.cursor + 1]) : undefined} occurrences={copies} playlistName={baseline?.playlistName ?? 'Демо-плейлист'} cursor={review.cursor} total={windowSize} busy={busy} decisionPending={decisionPending} canDecide={mayDecide} canUndo={decisionPending || Boolean(review.history.length)} withoutSound={withoutSound} playback={player} soundLabel={withoutSound ? 'Без звука' : confirmed ? 'Играет текущий трек · демо-фрагмент' : player.message || (player.status === 'loading' ? 'Загружаем звук…' : 'Звук на паузе')} cardRef={cardHandle} onPendingChange={setDecisionPending} onDecisionCommit={decide} onDecision={requestDecision} onUndo={undo} onTogglePlayback={() => { if (mayPause) { autoplay.current = false; playback.pause() } else { setSoundMode(false); autoplay.current = true; void playback.play() } }} onSeek={(position) => playback.seek(position)} onSilent={() => { autoplay.current = false; playback.pause(); setSoundMode(true) }} onFinish={() => void preview()} onBack={() => { cardHandle.current?.finish(); setScreen('choose') }} />
         {!current && <div className="music-empty-actions"><ReviewUndoShortcut disabled={busy} canUndo={Boolean(review.history.length)} onUndo={undo} /><button className="text-button" disabled={busy || !review.history.length} onClick={undo}>Отменить решение</button>{baseline && !review.queue.length && baseline.orderedEntries.length > 0 && <button className="button secondary" disabled={busy} onClick={() => void restart()}>Начать новый проход</button>}</div>}
         {inaccessible > 0 && <p className="music-review-footnote">{inaccessible} особенных записей сохранятся в плейлисте.</p>}
       </> : null}
-      {session && <p className="save-status" aria-live="polite">{decisionPending ? 'Завершаем решение…' : sessionState.saving ? 'Сохраняем решения…' : sessionState.persistent ? 'Решения сохранены на этом устройстве' : 'Решения пока только в этой вкладке'}</p>}
+      {session && <p className={`save-status${sessionState.persistent ? ' sr-only' : ''}`} aria-live="polite">{decisionPending ? 'Завершаем решение…' : sessionState.saving ? 'Сохраняем решения…' : sessionState.persistent ? 'Решения сохранены на этом устройстве' : 'Решения пока только в этой вкладке'}</p>}
       {screen === 'preview' && plan ? <ApplyPreview plan={plan} source={previewSource} busy={busy} temporary={Boolean(gateway.storageWarning)} onMode={switchApplyMode} onBack={() => setScreen('review')} onApply={() => void apply()} /> : null}
       {screen === 'result' ? <section className="result-panel" aria-live="polite"><h2>{result?.state === 'complete' ? 'Результат совпал с планом.' : 'Изменения не подтверждены.'}</h2><p>{result?.message}</p>{result?.state === 'complete' && <><p className="result-count">{(result.targetBaseline ?? baseline)?.orderedEntries.length}<span>{result.targetPlaylistId ? 'записей в новой приватной демо-копии' : 'записей осталось в демо-плейлисте'}</span></p>{result.targetPlaylistId && <p>Исходный плейлист сохранён: {baseline?.orderedEntries.length} записей. Копия доступна в списке демо-плейлистов.</p>}</>}<div className="button-row">{operation && !operation.sessionFinalized && <button className="button primary" disabled={busy} onClick={() => void recoverOperation()}>Проверить результат</button>}{operation?.state === 'partial' && !operation.pendingBatch && !operation.pendingCreate && <button className="button secondary" disabled={busy} onClick={() => void recoverOperation(true)}>Продолжить применение</button>}{result?.state === 'complete' && session && currentUri(session) && <button className="button primary" onClick={() => setScreen('review')}>Продолжить разбор</button>}<button className="button secondary" onClick={() => setScreen('choose')}>Вернуться к плейлистам</button><a className="button secondary" href="/">Подключить Spotify</a></div></section> : null}
-      <footer><span>Jamify · оставь любимое</span><button className="text-button" disabled={busy} onClick={() => void clearLocalData()}>Очистить локальные демо-данные</button><span>Демо не обращается к Spotify</span></footer>
+
     </main>
   </div>
 }
