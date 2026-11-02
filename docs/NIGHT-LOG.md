@@ -41,3 +41,7 @@
 Работа продолжена внутри desktop, без внешнего Terminal/Codex CLI. User-directed revision сменила обычный root с S0 на настоящую read-only медиатеку, вынесла диагностику в/diagnostics, добавила общий компактный MusicReview и полный проход без25-card cap. Последние визуальные уточнения последовательно отменили light/teal и промежуточную warm palette; закреплена точная Spotify dark/green. История предыдущих ночных проверок не является доказательством новых live возможностей.
 
 Independent lifecycle review исправлен: wrong URI сбрасывает playing; stale rejected activation consumed; blocked localStorage reads переходят в volatile memory и source drafts сохраняются в рамках вкладки; excluded entries объясняются. Source identity не изобретается. Полный check167 и e2e126 pass. Обложки/скриншоты только собственные fixtures; новые реальные Spotify записи не выполнялись, unknown test не тронут. Commit/push толькоcodex/night-2026-11-01, без merge/deploy.
+
+### Новое поручение пользователя, 2026-11-02
+
+После лимита возобновлены незавершённые playback404/read fixes; выполнены175unit/check и138browser tests, independentUIreviewship. Пользователь явно попросил минимальный UI и Vercel publication; эта новая инструкция разрешила productiondeploy вне старогоovernight запрета. Vercel existingauth использован, создан Jamifyproject иproductionREADY1ca4bde, publicalias https://jamify-lyart.vercel.app. НеавторизованныйHTTP/Chromiumsmoke прошёл; реальный Spotifygrant ждёт добавленияHTTPSredirect вDashboard. СтарыйDELETEunknown и основныеплейлисты не тронуты, mainнеmerge.

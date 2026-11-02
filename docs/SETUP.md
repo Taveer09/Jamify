@@ -22,3 +22,5 @@ HTTP 403: проверь allowlist, Premium, доступность endpoint и 
 ## Production на Vercel
 
 Для production нужен публичный Client ID в VITE_SPOTIFY_CLIENT_ID; Client Secret не нужен. Redirect URI по умолчанию берётся из текущего origin + /callback. Не переносите локальный VITE_SPOTIFY_REDIRECT_URI=http://127.0.0.1:5173/callback вproduction: зарегистрируйте точный HTTPS адрес опубликованного сайта в Spotify Dashboard. Vercel rewrites сохраняют /demo, /callback и /diagnostics при прямом открытии. Локальные .env и OAuthданные вupload не входят.
+
+Production URL: **https://jamify-lyart.vercel.app**. В приложении Jamify в [Spotify Dashboard](https://developer.spotify.com/dashboard) → Settings → Redirect URIs добавьте `https://jamify-lyart.vercel.app/callback` и сохраните. Для локальной разработки оставьте также `http://127.0.0.1:5173/callback`. Поле Website можно поставить на опубликованный адрес. Приложение формирует production redirect именно на HTTPS домен; Client ID настроен владельцем на Vercel. Allowlist и разрешения Spotify сохраняют силу.

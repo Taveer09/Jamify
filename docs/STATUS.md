@@ -95,3 +95,9 @@ Live решения привязаны к аккаунту/списку, сох�
 Пользователь попросил минимальный сайт: две основные кнопки, плеер и Undo; вторичные действия скрыты в меню. Новые regression checks покрывают скрытые действия/keyboard/menu, возвращение звука после silent mode, устройство404 и явный retry, чужой owner с разрешённым API read, отмены во времяtransfer/read/refresh. npm run check175/175 unit + type/lint/build pass; полный e2e138/138 Chromium/WebKit pass. Промежуточный suite133/136 выявил race тестового helper при переходе chooser→review; helper теперь ждёт region, повторы полностью прошли.
 
 Публикация на Vercel явно разрешена новым запросом. Создан проект Jamify в существующем аккаунте, настроен только публичный Spotify Client ID дляproduction; secrets/.env не отправляются. SPA routes/favicon/headers подготовлены. Итоговый URL и production smoke фиксируются после фактического деплоя. Новая реальная Spotify-аудиопроба not-run: Safari не разрешил JavaScript inspection; эту настройку не меняли. DELETEunknown не повторяли.
+
+### Публикация подтверждена
+
+https://jamify-lyart.vercel.app — production READY, опубликован CLI из commit1ca4bde, deployment dpl_9nSiLebUo9jhyU12SYonda7G8hS7. Неавторизованные HTTP запросы к /, /demo, /callback, /diagnostics вернули200, favicon —200image/svg+xml. Production browser smoke на390px подтвердил загруженный публичный Client ID, точный redirect https://jamify-lyart.vercel.app/callback, реальное воспроизведение собственного demo WAV через browser playing event, ArrowRight/Undo, отсутствие pageerror и horizontaloverflow. Запрос авторизации перехвачен до Spotify; реальный productionOAuth/playback не выдаётся за проверенный.
+
+Пользователю осталось зарегистрировать новый HTTPS redirect в Spotify Dashboard. Деплой и push ночной ветки выполнены по новому прямому запросу; main не объединялся. Только public config добавлен вproduction; .env/refresh/access/OIDC credentials не публиковались.
