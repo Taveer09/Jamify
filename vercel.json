@@ -35,5 +35,18 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "usejamify.vercel.app"
+        }
+      ],
+      "destination": "https://jamify-lyart.vercel.app/:path*",
+      "permanent": false
+    }
   ]
 }

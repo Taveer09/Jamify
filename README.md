@@ -1,6 +1,6 @@
 # Jamify
 
-[Открыть сайт](https://jamify-lyart.vercel.app) · [Демо без аккаунта](https://jamify-lyart.vercel.app/demo)
+[Открыть сайт](https://usejamify.vercel.app) · [Демо без аккаунта](https://usejamify.vercel.app/demo)
 
 Переслушай плейлист. Свайп вправо — оставить, влево — убрать. Применение начинается после проверки решений.
 
@@ -66,3 +66,5 @@ Refresh token и одноразовый PKCE хранятся в `sessionStorage
 [SPEC](docs/SPEC.md) · [PLAN](docs/PLAN.md) · [STATUS](docs/STATUS.md) · [QA](docs/QA.md) · [DESIGN](docs/DESIGN.md) · [PRIVACY](docs/PRIVACY.md)
 
 Код — [MIT](LICENSE). Собственные вымышленные аудио и обложки — [CC0](public/demo/README.md). Шрифт Onest — SIL Open Font License, его текст включён в `public/fonts/Onest-OFL.txt`.
+
+Короткий адрес для ссылки: https://usejamify.vercel.app. Он перенаправляет на основной jamify-lyart.vercel.app с сохранением пути и параметров, поэтому зарегистрированный Spotify callback не меняется. Адрес jamify.vercel.app занят другим проектом.
