@@ -139,3 +139,11 @@ Approved follow-up implemented: clear «Разбери свой плейлист
 Final npm run check194/194 plus types/lint/build pass. Full Chromium/WebKit154/154 pass (/tmp/jamify-friendly-e2e); final loader2/2 after screenshot addition and last hover/reduced-motion CSS adjustment. Welcome/review390/768/1440 and loader screenshot inspected. No overflow; login/decisions fit first viewport. These are local/demo/fixture checks, not authenticated Spotify audio verification. Existing DELETEunknown gate unchanged. Publishing under existing user authorization, release proof follows.
 
 Published39efffd, READY dpl_6tFSmhH1Jrz61KtabcB8Sbfdv37h at https://jamify-lyart.vercel.app. Public Chromium390 smoke: HTTP200/new welcome/new art, demo audio deliberately held -> no background change; released -> actual playing and matching cover background; pause retains art;0pageerror/overflow. No authenticated Spotify playback test. Changes pushed to night branch without main merge.
+
+## Short address and home-screen icons, 2026-11-03
+
+jamify.vercel.app alias assignment rejected by Vercel as already in use. Added usejamify.vercel.app to this project (not merely a deployment alias), so it is public and follows production. Host-specific307 redirects preserve path/query and keep the existing jamify-lyart.vercel.app Spotify callback/session origin. Initial wildcard rule did not match root in production; explicit root rule fixed it. Final public checks: root/demo?source=short/callback?test=1 ->307 exact canonical target ->200. Chromium followed redirect, rendered welcome and started demo. No user OAuth attempt.
+
+Apple180 and Android192/512 plus maskable512 PNG icons rendered from existing vector Jamify logo. Apple touch link, app title and web manifest published. Manifest display=browser preserves browser-based OAuth; no service worker/offline/standalone introduced. PNG512 visually inspected; live browser fetched/decoded all four PNGs with exact sizes/MIME. Physical iOS/Android home-screen installation not-run; cached shortcuts may need removal/re-addition.
+
+npm run check194/194+types/lint/build passed; final production build READY b29c90e / dpl_13361Ph155byh3wAAJEE8PML8fz9. Public Playwright routing/demo/icon smoke passed. Branch pushed without main merge; no Spotify mutations.
