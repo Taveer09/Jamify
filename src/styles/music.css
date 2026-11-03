@@ -295,3 +295,9 @@ body:has(.music-shell) { scrollbar-color: #727272 #121212; }
 @media (hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference) { .music-shell .button.primary:hover:not(:disabled):not(:active), .music-play:hover:not(:disabled):not(:active) { transform: scale(1.025); } }
 @media (max-width:700px) { .music-shell .welcome-art img { width: 138px; height: 138px; } .source-loading { margin-top: 40px; } }
 @media (prefers-reduced-motion:reduce) { .music-shell .button, .music-play, .music-options > summary, .library-item, .music-reconnect { transition: none; } .music-shell .button:not(:disabled):active, .music-play:not(:disabled):active, .music-shell .library-item:not(:disabled):active, .music-shell .button.primary:hover:not(:disabled), .music-play:hover:not(:disabled) { transform: none; } }
+
+.music-heading-group { display: flex; align-items: center; gap: 18px; min-width: 0; }
+.review-back { display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex-shrink: 0; min-height: 44px; padding: 0 10px 0 0; border: 0; background: transparent; color: var(--muted); border-radius: 8px; font-size: 13px; }
+.review-back:active:not(:disabled) { opacity: .7; }
+@media (hover:hover) and (pointer:fine) { .review-back:hover:not(:disabled) { color: var(--text); } }
+@media (max-width:700px) { .music-heading-group { gap: 8px; } .review-back { width: 36px; padding: 0; } .review-back span { display: none; } }

@@ -28,7 +28,7 @@ export function MusicReview(props: MusicReviewProps) {
   return <section className="music-review" aria-label="Разбор плейлиста">
     <AlbumBackdrop imageUrl={entry?.imageUrl} enabled={!entry || (playback.status === 'playing' && playback.actualUri === entry.playbackUri)} />
     <header className="music-review-header">
-      <div className="music-playlist"><h1>{playlistName}</h1><p className="session-progress"><span>{Math.min(cursor + (entry ? 1 : 0), total)} / {total}</span></p></div>
+      <div className="music-heading-group"><button className="review-back" type="button" aria-label="Выйти из разбора" disabled={busy} onClick={onBack}><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12"/></svg><span>Назад</span></button><div className="music-playlist"><h1>{playlistName}</h1><p className="session-progress"><span>{Math.min(cursor + (entry ? 1 : 0), total)} / {total}</span></p></div></div>
       <div className="music-header-actions">
         <details ref={menu} className="music-options" onKeyDown={event => { if(event.key === 'Escape'){event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus()} }}>
           <summary aria-label="Ещё действия"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor" /><circle cx="12" cy="12" r="1.7" fill="currentColor" /><circle cx="19" cy="12" r="1.7" fill="currentColor" /></svg></summary>
