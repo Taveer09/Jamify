@@ -147,3 +147,7 @@ jamify.vercel.app alias assignment rejected by Vercel as already in use. Added u
 Apple180 and Android192/512 plus maskable512 PNG icons rendered from existing vector Jamify logo. Apple touch link, app title and web manifest published. Manifest display=browser preserves browser-based OAuth; no service worker/offline/standalone introduced. PNG512 visually inspected; live browser fetched/decoded all four PNGs with exact sizes/MIME. Physical iOS/Android home-screen installation not-run; cached shortcuts may need removal/re-addition.
 
 npm run check194/194+types/lint/build passed; final production build READY b29c90e / dpl_13361Ph155byh3wAAJEE8PML8fz9. Public Playwright routing/demo/icon smoke passed. Branch pushed without main merge; no Spotify mutations.
+
+## Home icon alignment fix, 2026-11-03
+
+User's real iOS screenshot exposed the source SVG mark shifted left inside its square. Centered the actual path bounds with translate(4,.55) in the40px viewBox and regenerated Apple/Android PNGs. Browser raster inspection: Apple180 green bounds x40..139,y34..145 (center exact);512 x113..398,y98..413 (exact); maskable512 exact;192 within0.5px. Apple180/512 images visually inspected. Added?v=2 to favicon/touch/manifest/icon references to separate cached assets. Existing pinned shortcuts may still require removal/re-addition. No logo redesign or Spotify changes. Check194/194+types/lint/build passed; live asset verification follows publication.
