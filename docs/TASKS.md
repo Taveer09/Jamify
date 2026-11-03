@@ -95,3 +95,5 @@
 2026-11-03 visual follow-up: root owns AlbumBackdrop, shared music scene/styles, local Onest font and relevant browser checks. Implement the approved atmosphere without additional visible controls or playback/API changes. Keep two image layers, ignore stale loads and respect reduced motion. Verification/deployment evidence in QA/STATUS; no live mutation actions.
 
 Welcome/loading follow-up: root integrates optional read-only pagination progress, cancellation UI, playback-gated background and press CSS. Preserve probe/stableSnapshot authorization and user playlists. Artwork change only on first welcome screen. All extra feature suggestions (search/resume/history redesign) deferred.
+
+21st.dev refresh: root owns shared Button/PlaybackTransport/polish.css + public screens, with existing SDK logic intact except autoplay copy. No generation credits/purchases; two free component retrievals only. Confirm regressions and live hosting independently of actual Spotify audio. Source record UI-SOURCES.md.

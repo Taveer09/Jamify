@@ -41,7 +41,7 @@ test('demo plays the local audio, supports seeking and pauses before leaving the
   }
   await expect(page.getByRole('status')).toContainText('Играет текущий трек')
   await page.getByLabel('Позиция воспроизведения').fill('3000')
-  await expect(page.locator('.music-time')).toContainText('0:03')
+  await expect(page.locator('.transport-time').first()).toContainText('0:03')
   await page.getByRole('button', { name: 'Пауза', exact: true }).click()
   await expect(page.getByRole('status')).toContainText('Звук на паузе')
   await reviewOption(page, 'Пропустить')

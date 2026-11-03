@@ -4,6 +4,7 @@ import { App } from './app/App'
 import { DemoApp } from './screens/DemoApp'
 import { LibraryApp } from './screens/LibraryApp'
 import './styles/app.css'
+import './styles/polish.css'
 
 let diagnosticCallback = false
 try { diagnosticCallback = window.location.pathname === '/callback' && sessionStorage.getItem('jamify.auth.destination') === 'diagnostics' } catch { /* The screen reports blocked storage. */ }

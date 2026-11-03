@@ -182,8 +182,8 @@ test('resumes the loaded real-mode track via SDK without another API start',asyn
 
 test('recovers browser autoplay refusal on the same SDK using the next explicit click',async({page})=>{
  const {writes}=await fixture(page,{autoplayFirst:true});await page.goto('/');await page.getByRole('button',{name:/Моя музыка/}).click()
- await expect(page.getByRole('status')).toContainText('Браузер ждёт нажатия')
- await page.getByRole('button',{name:'Подключить звук',exact:true}).click()
+ await expect(page.getByRole('status')).toContainText('Нажми «Слушать»')
+ await page.getByRole('button',{name:'Слушать',exact:true}).click()
  await expect(page.getByRole('status')).toContainText('Играет текущий трек')
  expect(writes.filter(write=>write.path==='me/player/play')).toHaveLength(1)
  expect(writes.filter(write=>write.path==='me/player')).toHaveLength(1)
@@ -230,4 +230,19 @@ test('playlist loader shows actual pagination counts and supports leaving withou
  await expect(page.getByRole('region',{name:'Разбор плейлиста'})).toHaveCount(0)
  await page.getByRole('button',{name:/Моя музыка/}).click()
  await expect(page.getByRole('region',{name:'Разбор плейлиста'})).toBeVisible()
+})
+
+test('refreshed library keeps loading feedback stable without shifting its refresh control',async({page})=>{
+ await fixture(page);await page.goto('/');await expect(page.getByRole('heading',{name:'Твоя медиатека'})).toBeVisible()
+ for(const width of [390,768,1440]){
+  await page.setViewportSize({width,height:900})
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+  await page.screenshot({path:`/tmp/jamify-21st-library-${width}.png`,fullPage:true})
+ }
+ let release!:()=>void;const held=new Promise<void>(done=>{release=done})
+ await page.route('**/me/playlists*',async route=>{await held;await route.fallback()})
+ const refresh=page.getByRole('button',{name:'Обновить'}),before=await refresh.boundingBox()
+ await refresh.click();await expect(refresh).toHaveAttribute('aria-busy','true');await expect(refresh).toBeDisabled()
+ expect((await refresh.boundingBox())?.width).toBe(before?.width)
+ release();await expect(refresh).toBeEnabled()
 })

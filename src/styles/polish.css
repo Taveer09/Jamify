@@ -1,0 +1,85 @@
+/* Shared controls adapted from Origin UI Button, via 21st.dev MCP.
+   Player composition: deltacomponents MP3 Player. See docs/UI-SOURCES.md. */
+.music-shell .ui-button { position: relative; outline-offset: 4px; -webkit-user-select: none; user-select: none; }
+.music-shell .ui-button > svg { flex-shrink: 0; pointer-events: none; }
+.music-shell .ui-button:focus-visible { outline: 2px solid var(--accent); }
+.ui-button-label { opacity: 0; }
+.ui-button-loader { position: absolute; inset: 0; display: grid; place-items: center; }
+.ui-button-loader svg { animation: ui-spin .85s linear infinite; }
+@keyframes ui-spin { to { transform: rotate(360deg); } }
+.music-shell .demo-header { min-height: 80px; }
+.music-shell .demo-header nav { font-size: 12px; }
+.music-shell .wordmark { font-size: 26px; }
+.music-shell .library-picker { max-width: 780px; margin-top: 36px; }
+.music-shell .library-title { margin-bottom: 30px; }
+.music-shell .library-title h1 { font-weight: 650; font-size: 34px; letter-spacing: -.035em; }
+.music-shell .library-title p { color: var(--muted); font-size: 14px; }
+.music-shell .library-title > .text-button { min-height: 44px; background: var(--surface); border-radius: 10px; padding: 10px 16px; text-decoration: none; color: var(--text); }
+.music-shell .library-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; background: none; padding: 0; }
+.music-shell .library-item { min-height: 108px; gap: 14px; padding: 18px; border: 1px solid #ffffff09; border-radius: 14px; background: var(--surface); }
+.music-shell .library-item:last-child { border: 1px solid #ffffff09; }
+.music-shell .library-item strong { font-size: 14px; line-height: 1.45; }
+.music-shell .library-item small { font-size: 12px; margin-top: 5px; }
+.music-shell .library-cover { width: 56px; height: 56px; border-radius: 8px; }
+.music-shell .library-item.liked-item { grid-column: 1/-1; }
+.music-shell .liked-cover { background: #163d25; color: var(--accent); }
+.music-shell .library-item > span:last-child { color: var(--muted); }
+.music-shell .music-welcome { margin-top: 38px; }
+.music-shell .music-welcome > .button { border-radius: 12px; min-height: 52px; padding-inline: 32px; font-size: 14px; }
+.music-shell .welcome-demo { color: var(--muted); text-decoration: none; }
+.music-shell .welcome-demo:hover { color: var(--text); }
+.music-shell .developer-settings summary { list-style: none; }
+.music-shell .developer-settings summary::-webkit-details-marker { display: none; }
+.music-shell .playlist-option { padding: 20px; border-color: #ffffff09; }
+.music-shell .playlist-option.selected { border-color: #1ed76088; background: #16231a; }
+.music-shell .demo-chooser .button.primary { border-radius: 12px; min-height: 52px; }
+.music-options > summary { background: #ffffff08; }
+.music-options-menu { padding: 6px; border: 1px solid #ffffff0c; border-radius: 14px; }
+.music-options-menu .ui-button, .music-options-menu a { font-size: 13px; border-radius: 8px; }
+.music-options-menu p { font-size: 12px; line-height: 1.6; padding: 12px; }
+.music-shell .review-back { min-width: 44px; min-height: 44px; }
+.music-player { width: 360px; max-width: 100%; gap: 14px; margin-top: 12px; }
+.music-timeline { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 10px; }
+.transport-time { color: var(--muted); font-size: 11px; line-height: 1; font-variant-numeric: tabular-nums; }
+.music-seek, .music-progress { min-width: 0; height: 44px; }
+.music-seek-track { height: 3px; background: #ffffff38; }
+.music-seek input[type=range]::-webkit-slider-thumb { width: 9px; height: 9px; margin-top: -3px; }
+.music-play { background: #282828; color: #fff; }
+.music-play:hover:not(:disabled) { background: #383838; }
+.music-play svg { width: 15px; height: 15px; }
+.music-audio-hint { width: 360px; max-width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 2px; }
+.music-audio-hint .music-sound-status { margin: 0; font-size: 11px; text-align: left; }
+.music-audio-hint .music-silent { margin: 0; padding: 0 4px; min-height: 44px; font-size: 11px; flex-shrink: 0; color: var(--muted); }
+.music-sound-error { flex-wrap: wrap; width: 360px; max-width: 100%; gap: 0 14px; padding: 10px 14px; }
+.music-sound-error .music-sound-status { flex-basis: 100%; font-size: 12px; }
+.music-sound-error .music-silent { margin-left: auto; font-size: 11px; color: var(--muted); }
+.music-shell .music-stage .review-controls { margin-top: 14px; }
+.music-shell .music-stage .decision-buttons { gap: 12px; }
+.music-shell .music-stage .decision-buttons .button { border-radius: 14px; min-height: 54px; font-size: 14px; }
+.music-shell .music-stage .review-bottom { margin-top: 8px; }
+.music-shell .preview-panel, .music-shell .result-panel { border: 1px solid #ffffff09; border-radius: 16px; }
+.music-shell .live-summary h1 { font-weight: 650; font-size: 32px; }
+.source-loading progress { height: 3px; }
+.source-loading .text-button { font-size: 13px; text-decoration: none; padding-inline: 16px; border-radius: 10px; }
+@media (hover:hover) and (pointer:fine) {
+ .music-shell .library-item:hover:not(:disabled) { border-color: #ffffff20; background: #202020; }
+ .music-shell .library-item:hover:not(:disabled) strong { color: var(--text); }
+ .music-shell .source-loading .text-button:hover { background: var(--surface); color: var(--text); }
+ .music-seek input[type=range]::-webkit-slider-thumb { opacity: 0; transition: opacity 140ms ease; }
+ .music-seek:hover input[type=range]::-webkit-slider-thumb, .music-seek:focus-within input[type=range]::-webkit-slider-thumb { opacity: 1; }
+}
+@media (max-width:700px) {
+ .music-shell .demo-header { min-height: 66px; }
+ .music-shell .wordmark { font-size: 25px; }
+ .music-shell .library-picker { margin-top: 22px; }
+ .music-shell .library-title h1 { font-size: 28px; }
+ .music-shell .library-list { grid-template-columns: minmax(0,1fr); gap: 10px; }
+ .music-shell .library-item { min-height: 92px; padding: 15px; }
+ .music-shell .library-item strong { font-size: 14px; }
+ .music-shell .music-welcome { margin-top: 24px; }
+ .music-player, .music-audio-hint, .music-sound-error { width: 300px; }
+ .music-timeline { gap: 7px; }
+ .music-shell .music-stage .decision-buttons .button { min-height: 52px; font-size: 13px; }
+}
+@media (max-width:370px) { .music-player,.music-audio-hint,.music-sound-error { width: 280px; } }
+@media (prefers-reduced-motion:reduce) { .ui-button-loader svg { animation: none; } }

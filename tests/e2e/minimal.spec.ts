@@ -26,3 +26,16 @@ for(const width of [390,768,1440])test(`minimal review keeps decisions visible a
   await reviewOption(page,'Проверить решения')
   await expect(page.getByRole('region',{name:'Предпросмотр изменений'})).toBeVisible()
 })
+
+test('silent choice after a loading error never turns into a reconnect click',async({page})=>{
+ let release!:()=>void;const held=new Promise<void>(done=>{release=done});let requests=0
+ await page.route('**/demo/*.wav',async route=>{requests++;await held;await route.fulfill({status:404,body:'missing'})})
+ await page.goto('/demo');await page.getByRole('button',{name:/Начать разбор/}).click()
+ await expect(page.getByRole('status')).toContainText('Загружаем звук')
+ await expect(page.getByRole('button',{name:'Продолжить без звука'})).not.toBeVisible()
+ release();await expect(page.getByRole('status')).toContainText('не загрузилось')
+ await page.getByRole('button',{name:'Продолжить без звука'}).click()
+ await expect(page.getByRole('button',{name:'Оставить',exact:true})).toBeEnabled()
+ await expect(page.getByRole('button',{name:'Подключить звук'})).toHaveCount(0)
+ expect(requests).toBe(1)
+})

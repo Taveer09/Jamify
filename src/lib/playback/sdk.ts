@@ -96,7 +96,7 @@ export class BrowserPlayer {
         player.addListener(event, () => {
           window.clearTimeout(timer)
           const error = new Error(event === 'account_error' ? 'Для плеера нужен Spotify Premium.' : 'Spotify не смог запустить плеер. Попробуй подключить его заново.')
-          if (!this.disposed) this.notify({ state: 'error', code:event, message: event==='autoplay_failed'?'Браузер ждёт нажатия. Нажми «Подключить звук».':error.message })
+          if (!this.disposed) this.notify({ state: 'error', code:event, message: event==='autoplay_failed'?'Нажми «Слушать», чтобы включить звук.':error.message })
           reject(error)
         })
       }

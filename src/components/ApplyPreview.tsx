@@ -1,3 +1,4 @@
+import { Button } from './ui/Button'
 import { useState } from 'react'
 import type { ApplyPlan, Baseline } from '../contracts'
 
@@ -39,6 +40,6 @@ export function ApplyPreview({ plan, source, busy, temporary, onMode, onBack, on
       return <li key={uri}><span><strong>{group[0]?.title ?? 'Трек'}</strong><span>{group[0]?.artist}</span></span><span>{occurrences(group.length)}</span></li>
     })}</ul> : <p className="description">Ни один трек не помечен на удаление. Плейлист сохранится целиком.</p>}
     <p className="field-hint">Это демо: изменения сохраняются только на этом устройстве и не затрагивают Spotify.</p>
-    <div className="button-row"><button className="button secondary" disabled={busy} onClick={onBack}>Вернуться к решениям</button><button className="button primary" disabled={busy || Boolean(plan.blockedReasons.length)} onClick={onApply}>{busy ? 'Проверяем результат…' : copy ? 'Создать копию в демо' : 'Применить в демо'}</button></div>
+    <div className="button-row"><Button className="button secondary" disabled={busy} onClick={onBack}>Вернуться к решениям</Button><Button className="button primary" disabled={busy || Boolean(plan.blockedReasons.length)} onClick={onApply}>{busy ? 'Проверяем результат…' : copy ? 'Создать копию в демо' : 'Применить в демо'}</Button></div>
   </section>
 }
