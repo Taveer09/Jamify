@@ -38,6 +38,17 @@
   ],
   "redirects": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "usejamify.vercel.app"
+        }
+      ],
+      "destination": "https://jamify-lyart.vercel.app/",
+      "permanent": false
+    },
+    {
       "source": "/:path*",
       "has": [
         {
