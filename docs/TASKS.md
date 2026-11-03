@@ -87,3 +87,5 @@
 ## Текущая desktop-поправка
 
 Пользователь явно расширил чтение до медиатеки/Любимых и потребовал все треки за проход. Root интегрирует additive live-read путь отдельно от mutation coordinator; UI исполнитель меняет общую музыкальную сцену/стили, независимые ревьюеры проверяют lifecycle и итоговый рендер. Цветовое решение: последним запросом закреплена палитра Spotify, светлая/бирюзовая и промежуточная тёплая версии отменены. Права на реальные playlist writes не расширены.
+
+2026-11-03 playback task: root owns sdk/live/API/contracts/UI integration/tests. Independent reviewer critiques P1–P4 and critical async logic without touching real Spotify. Single execution path; no overlapping file ownership. Priority is playback, not visual redesign or mutation gating.

@@ -28,3 +28,9 @@
 Удаление остановило probe со статусом unknown. Первичная ошибка HTTP была скрыта старым generic catch; catch исправлен для следующих операций, но исходный статус задним числом не выдумывается. Повторное чтение с cache:no-store также возвращает A,B,A,C. Наблюдаемые GET headers max-age=0, CORS preflight допускает DELETE; это не объясняет первичный отказ. Не отправлять повтор DELETE, не сбрасывать journal и не создавать второй тест ради зелёного результата.
 
 SDK подключился и сообщил actual URI, совпадающий с запрошенным тестовым треком. После паузы/отключения paused callback не был зафиксирован, поэтому пауза не объявлена live pass. Временные файлы диагностики удалены; безопасные sessionStorage evidence доступны только в локальной вкладке и не публикуются.
+
+### Playback follow-up, 2026-11-03
+
+The repeated production screenshot404 remains live unresolved; exact failed player endpoint was previously hidden. New code distinguishes transfer/state/start, preserves safe reason codes, and uses optional read-only device visibility as evidence. SDKgetCurrentState/resume is the same-track path; autoplay_failed retains the existing instance. Commands are never blindly retried. Current tests187unit/full138browser+targeted26 pass; no new live Spotify result claimed.
+
+Primary references: https://developer.spotify.com/documentation/web-playback-sdk/reference (localstate/resume/useractivation); https://developer.spotify.com/documentation/web-api/reference/transfer-a-users-playback (play:false preserves state); https://developer.spotify.com/documentation/web-api/reference/get-a-users-available-devices (deviceID not guaranteed persistent; restricted devices).

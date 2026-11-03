@@ -62,6 +62,7 @@ export type PlaybackState = {
   requestedUri: string | null; actualUri: string | null; generation: number
   status: 'idle' | 'loading' | 'playing' | 'paused' | 'error'
   positionMs: number; durationMs: number; message?: string
+  diagnostic?: import('../lib/playback/failure').PlaybackDiagnostic
 }
 export interface PlaybackGateway {
   select(entry: Entry): void
