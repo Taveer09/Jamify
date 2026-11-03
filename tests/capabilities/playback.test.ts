@@ -33,7 +33,7 @@ describe('browser playback capability contracts', () => {
     const player = new BrowserPlayer(async () => 'fixture-token', (notice) => notices.push(notice))
     await player.connect()
     FakePlayer.instances[0].emit('player_state_changed', { paused: false, track_window: { current_track: { uri: 'spotify:track:actual' } } })
-    expect(notices.at(-1)).toEqual({ state: 'playing', uri: 'spotify:track:actual' })
+    expect(notices.at(-1)).toEqual({ state: 'playing', uri: 'spotify:track:actual', canSeek:false })
     player.disconnect()
   })
   it('revokes playing evidence when the SDK loses the playback state', async () => {

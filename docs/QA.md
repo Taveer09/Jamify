@@ -69,3 +69,20 @@ Check175unit/capability/domain/apply +types/lint/build pass. Full Chromium/WebKi
 Minimal screenshots390/768/1440 andmenus inspected; actionsfitfirstfold. No footer/always-visible secondarybuttons. Healthy save state is screenreader-only; errors/storagewarnings/safety note remainvisible. Menu/Escape/focus and explicit silent→audio transition verified. Real userSpotifynewplayback remainsnot-run, historicalunknownDELETEunchanged. Production smoke is appended afterdeployment.
 
 Production smoke (2026-11-02): https://jamify-lyart.vercel.app доступен без Vercel login. HTTP200 root/demo/callback/diagnostics, SVG favicon MIME корректен. Chromium390 проверил localdemo audio playing, arrow+Undo, zero pageerrors/overflow. Production authorize URL формирует верный /callback; запрос остановлен доOAuth, пользовательскийgrant иlive Spotify звук not-run.
+
+## Playback investigation (2026-11-03)
+
+187 unit tests/type/lint/build pass. New regression coverage: matching paused/unpaused SDK track avoids REST, rejected resume never REST-falls-through, original404 phase survives failed device diagnostics, replacementdevice duringtransfer and after activation, autoplay denial followed by sameSDK click, confirmation timeout despite null events, late playing after Pause, hung SDK read/pause deadline, reset during pendingSDK load. Full138 Chromium/WebKit pass; after adding browser SDKresume/autoplay fixtures and final reset guard, library26/26 pass (overlapping coverage; do not sum as unique tests). Fixture SDK evidence is not live Spotify audio.
+
+No authenticated live Jamify browser tab was available. Required live acceptance: select actual track→matching SDK URI+advancing position; hear sound; pause/resume same track→no extra RESTstart; change track→newmatchingURI;20swipes remain bound. If failure persists, capture only menu's stage/status/reason/visibility line. Never paste auth URL, token, device IDs or raw response. Original disposable DELETEunknown remains untouched.
+
+Production d054284 smoke: new bundle served onstablealias, HTTP200, actualdemo Audio playing andzero pageerror. This is a hosting/demo check, not liveSpotify playback proof. No real playlist writes performed.
+
+## Clock, seek and animated keyboard choices — 2026-11-03
+
+- Final check:194/194 unit, types/lint/build pass. Tests include clock progress with frozen SDK snapshots, pause/dispose, null state, stale poll after backward/forward seek, device replacement cancelling a seek, no polling during pending seek, long/short intro offsets. Cancelled/stale assertions occur before pause.
+- Full browser run146/146 Chromium/WebKit pass (/tmp/jamify-clock-seek-animation-e2e); final targeted library/review64/64 pass (/tmp/jamify-clock-seek-final-e2e). Overlapping suites; latest intro case included in final targeted run. Mouse-click seek, advancing time without Pause, paused position, keyboard exit/Undo, reduced motion and past25 choices covered with fake Spotify SDK/API.390px review render inspected.
+- Independent playback review findings addressed. Only local SDK calls reconcile/seek; no playlist/library mutations and no private preview endpoints. Intro30s is optional, session-only, off by default, tracks≤45s start at0. It does not detect a song's best part.
+- Real user Spotify audio/seek is not-run in this automated verification. Historical DELETEunknown and all mutation gates unchanged. Public deployment smoke follows after release.
+
+Production07a0554: dpl_DxxhkcQe8s9V72PXVrK3Ac3D5ST5 READY. Public alias HTTP200 and current bundle /assets/index-Ce2grAtQ.js verified without Vercel credentials. Chromium390 demo smoke: actual Audio playing event, moving timeline, click seek, native200ms keyboard exit, Undo, zero pageerror/overflow. Screenshot /tmp/jamify-player-production-390.png inspected. No user OAuth/live Spotify playback performed by this smoke.

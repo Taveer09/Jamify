@@ -41,7 +41,7 @@ export function ReviewControls({ entryUri, canDecide, disabled, decisionPending 
       const decision = event.key === 'ArrowLeft' ? 'remove' : event.key === 'ArrowRight' ? 'keep' : event.key === 'ArrowDown' ? 'skip' : null
       if (decision && (decision === 'skip' || canDecide)) {
         event.preventDefault()
-        if (entryUri) onDecision(entryUri, decision, false)
+        if (entryUri) onDecision(entryUri, decision, decision !== 'skip')
       }
     }
     document.addEventListener('keydown', keydown)
