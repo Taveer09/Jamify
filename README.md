@@ -65,4 +65,4 @@ Refresh token и одноразовый PKCE хранятся в `sessionStorage
 
 [SPEC](docs/SPEC.md) · [PLAN](docs/PLAN.md) · [STATUS](docs/STATUS.md) · [QA](docs/QA.md) · [DESIGN](docs/DESIGN.md) · [PRIVACY](docs/PRIVACY.md)
 
-Код — [MIT](LICENSE). Собственные вымышленные аудио и обложки — [CC0](public/demo/README.md). Шрифт Inter — SIL Open Font License, его текст включён в `public/fonts/Inter-OFL.txt`.
+Код — [MIT](LICENSE). Собственные вымышленные аудио и обложки — [CC0](public/demo/README.md). Шрифт Onest — SIL Open Font License, его текст включён в `public/fonts/Onest-OFL.txt`.

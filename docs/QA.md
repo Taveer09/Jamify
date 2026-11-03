@@ -86,3 +86,9 @@ Production d054284 smoke: new bundle served onstablealias, HTTP200, actualdemo A
 - Real user Spotify audio/seek is not-run in this automated verification. Historical DELETEunknown and all mutation gates unchanged. Public deployment smoke follows after release.
 
 Production07a0554: dpl_DxxhkcQe8s9V72PXVrK3Ac3D5ST5 READY. Public alias HTTP200 and current bundle /assets/index-Ce2grAtQ.js verified without Vercel credentials. Chromium390 demo smoke: actual Audio playing event, moving timeline, click seek, native200ms keyboard exit, Undo, zero pageerror/overflow. Screenshot /tmp/jamify-player-production-390.png inspected. No user OAuth/live Spotify playback performed by this smoke.
+
+## Album atmosphere and Onest — 2026-11-03
+
+Check194/194 +types/lint/build pass. Library/review68/68 Chromium/WebKit (/tmp/jamify-atmosphere-e2e); new four checks repeated after wait-order cleanup (/tmp/jamify-atmosphere-final). Coverage: background follows card/Undo; at most two layers; late old image cannot replace newer art; broken image dark fallback; reduced-motion CSS; local Onest loaded for Russian text; mouse seek/clock and existing library/swipe behavior remain green. No extra unit tests for styling. Actual authenticated Spotify playback not-run, unchanged by this UI-only task.
+
+Active review screenshots inspected at390/768/1440 (/tmp/jamify-atmosphere-checked-WIDTH.png). Taste probes/layout/app ran directly through installed Playwright Chromium because CLI could not locate system Chrome:0FAIL and small-title/tiny-text WARN at each width. No blanket success claim for Impeccable launcher (permission denied). Approved image/scrim allows gradient/glass rule exceptions only; no glass controls introduced. Font OFL bundled, no external font runtime request. No Spotify mutations performed.

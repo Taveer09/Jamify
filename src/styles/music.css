@@ -1,5 +1,7 @@
 body:has(.music-shell) { background: #121212; color-scheme: dark; }
 .music-shell {
+  position: relative;
+  isolation: isolate;
   /* Album sleeves sit one lightness step above the Spotify listening room. */
   --ground: #121212; --surface: #181818; --raised: #282828;
   --text: #ffffff; --muted: #b3b3b3; --faint: #b3b3b3;
@@ -28,6 +30,11 @@ body:has(.music-shell) { scrollbar-color: #727272 #121212; }
 .music-shell .demo-header nav { gap: 24px; font-size: 13px; }
 .music-shell .demo-main { max-width: 1080px; padding: 24px 32px 48px; }
 .music-review { width: 100%; }
+.album-backdrop { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; contain: strict; background: var(--ground); }
+.album-backdrop-layer { position: absolute; inset: -80px; opacity: 0; transition: opacity 520ms cubic-bezier(.23, 1, .32, 1); }
+.album-backdrop-layer.is-current { opacity: .72; }
+.album-backdrop-layer img { display: block; width: 100%; height: 100%; object-fit: cover; filter: blur(64px) saturate(.85); }
+.album-backdrop-scrim { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 38%, transparent 15%, #12121285 90%), linear-gradient(180deg, #121212e0 0%, #121212bd 38%, #121212c7 65%, #121212 100%); }
 .music-review-header { display: flex; justify-content: space-between; align-items: center; gap: 20px; max-width: 900px; margin: 0 auto; }
 .music-playlist { min-width: 0; }
 .music-playlist h1 { font-size: 20px; font-weight: 550; overflow-wrap: anywhere; letter-spacing: -.025em; }
@@ -53,7 +60,7 @@ body:has(.music-shell) { scrollbar-color: #727272 #121212; }
 .music-shell .music-stage .album-cover { width: 100%; max-width: none; height: auto; aspect-ratio: 1; object-fit: contain; }
 .music-shell .music-stage .track-details { width: 100%; margin-top: 12px; display: flex; flex-direction: column; }
 .music-shell .music-stage .track-details .small { order: 4; font-size: 11px; margin-top: 3px; }
-.music-shell .music-stage .track-details h2 { font-size: 23px; font-weight: 600; line-height: 1.25; letter-spacing: -.03em; margin: 0 0 4px; }
+.music-shell .music-stage .track-details h2 { font-size: 24px; font-weight: 650; line-height: 1.25; letter-spacing: -.035em; margin: 0 0 4px; }
 .music-shell .music-stage .track-details > p:not(.small) { color: var(--muted); font-size: 14px; line-height: 1.45; }
 .music-shell .music-stage .track-attribution { min-height: 36px; width: fit-content; color: var(--accent); font-size: 11px; margin-top: 3px; }
 .music-shell .music-stage .swipe-feedback { margin-top: 4px; min-height: 16px; font-size: 12px; line-height: 1.4; }
@@ -170,6 +177,7 @@ body:has(.music-shell) { scrollbar-color: #727272 #121212; }
 }
 @media (prefers-reduced-motion: reduce) {
   .music-shell .button, .music-shell button, .music-shell a { transition: none; }
+  .album-backdrop-layer { transition: none; }
 }
 /* The library stays quiet so the music remains the focus. */
 .music-shell .music-welcome { max-width: 620px; margin: 28px auto 0; text-align: center; }

@@ -91,3 +91,5 @@
 2026-11-03 playback task: root owns sdk/live/API/contracts/UI integration/tests. Independent reviewer critiques P1–P4 and critical async logic without touching real Spotify. Single execution path; no overlapping file ownership. Priority is playback, not visual redesign or mutation gating.
 
 2026-11-03 interaction follow-up: animated left/right through existing card exit; local progressing clock + SDK reconciliation; current-track SDK seek from the timeline; optional30s intro skipping behind overflow menu. Independent playback reviewer found null-state evidence, polling-during-seek and cancelled-seek publication issues; fixes and regressions precede final checks. Spotify internal highlight fragments are not claimed available. No playlist writes or mutation gate changes.
+
+2026-11-03 visual follow-up: root owns AlbumBackdrop, shared music scene/styles, local Onest font and relevant browser checks. Implement the approved atmosphere without additional visible controls or playback/API changes. Keep two image layers, ignore stale loads and respect reduced motion. Verification/deployment evidence in QA/STATUS; no live mutation actions.

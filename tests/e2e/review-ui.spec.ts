@@ -5,6 +5,7 @@ import type { Page } from '@playwright/test'
 declare global {
   interface Window {
     reviewAudio: HTMLAudioElement[]
+    setBackdrop: (url: string | null) => void
     reviewHarness: {
       events: Array<{ uri: string; decision: string }>
       undos: number
@@ -12,6 +13,54 @@ declare global {
     }
   }
 }
+
+test('album atmosphere follows the card and Undo; the local font covers Russian text', async ({page}) => {
+  await page.goto('/demo')
+  await page.getByRole('button',{name:/Начать разбор/}).click()
+  await expect(page.getByRole('button',{name:'Оставить',exact:true})).toBeEnabled()
+  const cover=page.locator('.track-card-motion .album-cover'),backdrop=page.locator('.album-backdrop-layer.is-current img')
+  const first=await cover.getAttribute('src')
+  await expect(backdrop).toHaveAttribute('src',first!)
+  await page.evaluate(()=>document.fonts.ready)
+  expect(await page.evaluate(()=>document.fonts.check('650 24px "Onest Variable"','Оставить музыку'))).toBe(true)
+  expect(await page.locator('body').evaluate(el=>getComputedStyle(el).fontFamily)).toContain('Onest Variable')
+  await bodyFocus(page);await page.keyboard.press('ArrowRight')
+  await expect(cover).not.toHaveAttribute('src',first!)
+  await expect(backdrop).toHaveAttribute('src',(await cover.getAttribute('src'))!)
+  await page.keyboard.press('Control+z')
+  await expect(cover).toHaveAttribute('src',first!)
+  await expect(backdrop).toHaveAttribute('src',first!)
+  await expect(page.locator('.album-backdrop-layer')).toHaveCount(2)
+  expect(await page.locator('.album-backdrop').evaluate(el=>getComputedStyle(el).pointerEvents)).toBe('none')
+})
+
+test('late cover load cannot replace a newer backdrop and broken art falls back to dark',async({page})=>{
+  let release!:()=>void;const held=new Promise<void>(done=>{release=done})
+  await page.route('**/test-cover-slow.svg',async route=>{await held;await route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><path fill="red" d="M0 0h10v10H0z"/></svg>'})})
+  await page.route('**/test-cover-broken.svg',route=>route.fulfill({status:404,body:''}))
+  await page.goto('/demo')
+  await page.evaluate(async()=>{
+    const reactPath='/node_modules/.vite/deps/react.js',domPath='/node_modules/.vite/deps/react-dom_client.js',backdropPath='/src/components/AlbumBackdrop.tsx'
+    const [{default:{createElement:h}},{default:{createRoot}},{AlbumBackdrop}]=await Promise.all([import(reactPath),import(domPath),import(backdropPath)])
+    document.getElementById('root')!.style.display='none'
+    const el=document.createElement('div');el.className='music-shell';document.body.append(el)
+    const root=createRoot(el);window.setBackdrop=url=>root.render(h(AlbumBackdrop,{imageUrl:url}));window.setBackdrop('/demo/rose.svg')
+  })
+  const current=page.locator('.album-backdrop-layer.is-current img')
+  await expect(current).toHaveAttribute('src','/demo/rose.svg')
+  const requested=page.waitForRequest('**/test-cover-slow.svg')
+  await page.evaluate(()=>window.setBackdrop('/test-cover-slow.svg'));await requested
+  await page.evaluate(()=>window.setBackdrop('/demo/citrus.svg'))
+  await expect(current).toHaveAttribute('src','/demo/citrus.svg')
+  const finished=page.waitForResponse('**/test-cover-slow.svg')
+  release();await finished
+  await expect(current).toHaveAttribute('src','/demo/citrus.svg')
+  await page.evaluate(()=>window.setBackdrop('/test-cover-broken.svg'))
+  await expect(current).toHaveCount(0)
+  await expect(page.locator('.album-backdrop-layer')).toHaveCount(2)
+  await page.emulateMedia({reducedMotion:'reduce'})
+  expect(await page.locator('.album-backdrop-layer').first().evaluate(el=>getComputedStyle(el).transitionDuration)).toBe('0s')
+})
 
 async function mountComponents(page: Page) {
   await page.goto('/demo')
