@@ -5,7 +5,7 @@ import type { Page } from '@playwright/test'
 declare global {
   interface Window {
     reviewAudio: HTMLAudioElement[]
-    setBackdrop: (url: string | null) => void
+    setBackdrop: (url: string | null, enabled?:boolean) => void
     reviewHarness: {
       events: Array<{ uri: string; decision: string }>
       undos: number
@@ -44,7 +44,7 @@ test('late cover load cannot replace a newer backdrop and broken art falls back 
     const [{default:{createElement:h}},{default:{createRoot}},{AlbumBackdrop}]=await Promise.all([import(reactPath),import(domPath),import(backdropPath)])
     document.getElementById('root')!.style.display='none'
     const el=document.createElement('div');el.className='music-shell';document.body.append(el)
-    const root=createRoot(el);window.setBackdrop=url=>root.render(h(AlbumBackdrop,{imageUrl:url}));window.setBackdrop('/demo/rose.svg')
+    const root=createRoot(el);window.setBackdrop=(url,enabled=true)=>root.render(h(AlbumBackdrop,{imageUrl:url,enabled}));window.setBackdrop('/demo/rose.svg')
   })
   const current=page.locator('.album-backdrop-layer.is-current img')
   await expect(current).toHaveAttribute('src','/demo/rose.svg')
@@ -55,6 +55,11 @@ test('late cover load cannot replace a newer backdrop and broken art falls back 
   const finished=page.waitForResponse('**/test-cover-slow.svg')
   release();await finished
   await expect(current).toHaveAttribute('src','/demo/citrus.svg')
+  await page.evaluate(()=>window.setBackdrop('/demo/rose.svg',false))
+  await page.waitForTimeout(600)
+  await expect(current).toHaveAttribute('src','/demo/citrus.svg')
+  await page.evaluate(()=>window.setBackdrop('/demo/rose.svg',true))
+  await expect(current).toHaveAttribute('src','/demo/rose.svg')
   await page.evaluate(()=>window.setBackdrop('/test-cover-broken.svg'))
   await expect(current).toHaveCount(0)
   await expect(page.locator('.album-backdrop-layer')).toHaveCount(2)

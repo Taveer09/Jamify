@@ -26,7 +26,7 @@ export function MusicReview(props: MusicReviewProps) {
   const position = Math.min(Math.max(0, playback.positionMs), duration)
   const timelineStyle = { '--played': `${duration ? position / duration * 100 : 0}%` } as CSSProperties
   return <section className="music-review" aria-label="Разбор плейлиста">
-    <AlbumBackdrop imageUrl={entry?.imageUrl} />
+    <AlbumBackdrop imageUrl={entry?.imageUrl} enabled={!entry || (playback.status === 'playing' && playback.actualUri === entry.playbackUri)} />
     <header className="music-review-header">
       <div className="music-playlist"><h1>{playlistName}</h1><p className="session-progress"><span>{Math.min(cursor + (entry ? 1 : 0), total)} / {total}</span></p></div>
       <div className="music-header-actions">

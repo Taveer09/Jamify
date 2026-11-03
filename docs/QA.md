@@ -94,3 +94,9 @@ Check194/194 +types/lint/build pass. Library/review68/68 Chromium/WebKit (/tmp/j
 Active review screenshots inspected at390/768/1440 (/tmp/jamify-atmosphere-checked-WIDTH.png). Taste probes/layout/app ran directly through installed Playwright Chromium because CLI could not locate system Chrome:0FAIL and small-title/tiny-text WARN at each width. No blanket success claim for Impeccable launcher (permission denied). Approved image/scrim allows gradient/glass rule exceptions only; no glass controls introduced. Font OFL bundled, no external font runtime request. No Spotify mutations performed.
 
 Production5872376 READY: dpl_BTGjkuBaipJSuhcVvRYTfKj35qgK. Public alias Chromium390 smoke: HTTP200, background follows current card/ArrowRight/Undo, Onest Cyrillic/Latin served locally with200,0pageerror/overflow. /tmp/jamify-atmosphere-production.png inspected. No authenticated Spotify audio claim.
+
+## Friendly flow follow-up — 2026-11-03
+
+Final check194/194, type/lint/build pass. Full Playwright154/154 Chromium/WebKit pass; final loader2/2 pass. New pagination fixture holds second page and verifies real50/70 progress, hidden picker during load, Back/cancel and no stale review navigation, then successful reopening. Backdrop fixture verifies disabled playback gate retains old art until enabled. Existing clock/seek/Undo/swipe/storage/error tests remain green. Final CSS gates hover to fine pointer + no reduced-motion; active presses shrink without opacity flash.
+
+Inspected welcome/review390/768/1440 (/tmp/jamify-welcome-friendly-WIDTH.png and /tmp/jamify-bright-WIDTH.png) and /tmp/jamify-playlist-loading.png. No overflow; controls visible. New welcome assets are original CC0 fictional sleeves, not actual albums; demo recordings/probe playlists unchanged. User Spotify account/audio not-run; no real playlist writes.

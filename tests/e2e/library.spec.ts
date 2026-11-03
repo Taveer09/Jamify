@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { reviewOption } from './helpers/music'
 
-async function fixture(page:Page, options:{deniedLiked?:boolean;denyFollowed?:boolean;failFirstPlay?:boolean;autoplayFirst?:boolean;holdItems?:Promise<void>}={}){
+async function fixture(page:Page, options:{deniedLiked?:boolean;denyFollowed?:boolean;failFirstPlay?:boolean;autoplayFirst?:boolean;holdItems?:Promise<void>;holdSecondPage?:Promise<void>}={}){
   const writes:Array<{path:string;method:string}>=[]
   let playAttempts=0
   const track=(index:number)=>({track:{type:'track',uri:`spotify:track:${String(index).padStart(22,'0')}`,name:`Track ${index}`,artists:[{name:'Fixture artist'}],duration_ms:180000,album:{images:[]}}})
@@ -40,6 +40,7 @@ async function fixture(page:Page, options:{deniedLiked?:boolean;denyFollowed?:bo
     if(path==='playlists/owned/items'||path==='playlists/followed/items'||path==='me/tracks'){
       await options.holdItems
       const offset=Number(url.searchParams.get('offset')||0),total=70,end=Math.min(total,offset+50)
+      if(offset>0)await options.holdSecondPage
       return route.fulfill({json:{items:Array.from({length:end-offset},(_,i)=>track(offset+i)),next:end<total?`https://api.spotify.com/v1/${path}?offset=${end}`:null,total}})
     }
     if(path==='me/player/devices')return route.fulfill({json:{devices:[{id:'fixture-device',is_restricted:false}]}})
@@ -212,4 +213,21 @@ test('intro skip is optional and seeks the current long track from its menu',asy
  await expect.poll(async()=>Number(await page.getByRole('slider',{name:'Позиция воспроизведения'}).inputValue())).toBeGreaterThanOrEqual(30000)
  await page.getByLabel('Ещё действия',{exact:true}).click()
  await expect(page.getByRole('button',{name:/Пропускать вступление/})).toHaveAttribute('aria-pressed','true')
+})
+
+
+test('playlist loader shows actual pagination counts and supports leaving without stale navigation',async({page})=>{
+ let release!:()=>void;const held=new Promise<void>(done=>{release=done})
+ await fixture(page,{holdSecondPage:held})
+ await page.goto('/');await page.getByRole('button',{name:/Моя музыка/}).click()
+ await expect(page.getByRole('status')).toHaveText('Загружено 50 из 70 треков')
+ await page.screenshot({path:'/tmp/jamify-playlist-loading.png',fullPage:true})
+ await expect(page.getByRole('progressbar',{name:'Загрузка треков'})).toHaveAttribute('value','50')
+ await expect(page.getByRole('button',{name:/Любимые треки/})).toHaveCount(0)
+ await page.getByRole('button',{name:'Назад к плейлистам'}).click()
+ release()
+ await expect(page.getByRole('heading',{name:'Твоя медиатека'})).toBeVisible()
+ await expect(page.getByRole('region',{name:'Разбор плейлиста'})).toHaveCount(0)
+ await page.getByRole('button',{name:/Моя музыка/}).click()
+ await expect(page.getByRole('region',{name:'Разбор плейлиста'})).toBeVisible()
 })

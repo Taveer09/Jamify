@@ -4,13 +4,14 @@ const fadeMs = 520
 type Layers = { images: [string | null, string | null]; active: -1 | 0 | 1 }
 
 /** Two bounded layers: decode first, then blend. Rapid choices retain only the newest request. */
-export const AlbumBackdrop = memo(function AlbumBackdrop({ imageUrl }: { imageUrl?: string | null }) {
+export const AlbumBackdrop = memo(function AlbumBackdrop({ imageUrl, enabled = true }: { imageUrl?: string | null; enabled?: boolean }) {
   const [layers, setLayers] = useState<Layers>({ images: [null, null], active: -1 })
   const current = useRef(layers)
   const availableAt = useRef(0)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
+    if (!enabled) return
     let cancelled = false
     const show = (url: string | null) => {
       clearTimeout(timer.current)
@@ -39,7 +40,7 @@ export const AlbumBackdrop = memo(function AlbumBackdrop({ imageUrl }: { imageUr
       clearTimeout(timer.current)
       image.onload = image.onerror = null
     }
-  }, [imageUrl])
+  }, [imageUrl, enabled])
 
   return <div className="album-backdrop" aria-hidden="true">
     {layers.images.map((url, index) => <div key={index} className={`album-backdrop-layer${layers.active === index ? ' is-current' : ''}`}>

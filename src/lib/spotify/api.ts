@@ -110,7 +110,7 @@ export class SpotifyApi {
     return z.object({ id: z.string(), display_name: z.string().nullable().optional() }).parse(await this.request('me'))
   }
 
-  private async collect(path: string): Promise<unknown[]> {
+  private async collect(path: string, onProgress?: (loaded:number,total:number)=>void): Promise<unknown[]> {
     const all: unknown[] = []
     const visited = new Set<string>()
     let next: string | null = path
@@ -124,6 +124,7 @@ export class SpotifyApi {
         throw new Error('Первая версия поддерживает до 10 000 записей. Выбери плейлист поменьше.')
       }
       all.push(...page.items)
+      onProgress?.(all.length,page.total)
       if (page.items.length === 0 && page.next) throw new Error('Spotify вернул пустую промежуточную страницу.')
       next = page.next
       if (!next && all.length !== page.total) throw new Error('Загружены не все записи. Обнови плейлист.')
@@ -151,12 +152,12 @@ export class SpotifyApi {
     })
   }
 
-  async reviewSnapshot(id: string): Promise<PlaylistSnapshot> {
+  async reviewSnapshot(id: string, onProgress?: (loaded:number,total:number)=>void): Promise<PlaylistSnapshot> {
     for (let attempt = 0; attempt < 2; attempt++) {
       const before = await this.playlist(id)
       // Library ownership is not an authorization verdict. Ask Spotify for read access;
       // existing/extended grants may read followed playlists too. Mutation probe stays strict.
-      const items = (await this.collect(`playlists/${encodeURIComponent(id)}/items?limit=50&additional_types=track,episode`)).map(parseObservedItem)
+      const items = (await this.collect(`playlists/${encodeURIComponent(id)}/items?limit=50&additional_types=track,episode`,onProgress)).map(parseObservedItem)
       const after = await this.playlist(id)
       if (before.owner.id !== after.owner.id || before.collaborative !== after.collaborative) throw new Error('Права плейлиста изменились во время загрузки. Попробуй ещё раз.')
       if (before.snapshot_id === after.snapshot_id) return { playlist: after, items }
@@ -164,8 +165,8 @@ export class SpotifyApi {
     throw new Error('Плейлист меняется во время загрузки. Попробуй ещё раз.')
   }
 
-  async savedTracks(): Promise<ObservedItem[]> {
-    return (await this.collect('me/tracks?limit=50')).map(parseObservedItem)
+  async savedTracks(onProgress?: (loaded:number,total:number)=>void): Promise<ObservedItem[]> {
+    return (await this.collect('me/tracks?limit=50',onProgress)).map(parseObservedItem)
   }
 
   async playlist(id: string): Promise<SpotifyPlaylist> {
