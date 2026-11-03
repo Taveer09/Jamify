@@ -12,13 +12,15 @@ async function fixture(page:Page, options:{deniedLiked?:boolean;denyFollowed?:bo
       listeners=new Map<string,(value:unknown)=>void>()
       currentUri=''
       paused=true
+      position=1200
       constructor(){window.addEventListener('fixture-playback',event=>this.emit((event as CustomEvent<string>).detail));window.addEventListener('fixture-autoplay',event=>{this.currentUri=(event as CustomEvent<string>).detail;this.paused=true;this.listeners.get('autoplay_failed')?.({})})}
-      emit(uri:string,paused=false){this.currentUri=uri;this.paused=paused;this.listeners.get('player_state_changed')?.({paused,position:1200,duration:180000,track_window:{current_track:{uri}}})}
+      emit(uri:string,paused=false){this.currentUri=uri;this.paused=paused;this.listeners.get('player_state_changed')?.({paused,position:this.position,duration:180000,track_window:{current_track:{uri}}})}
       addListener(name:string,fn:(value:unknown)=>void){this.listeners.set(name,fn);return true}
       async connect(){queueMicrotask(()=>this.listeners.get('ready')?.({device_id:'fixture-device'}));return true}
       disconnect(){this.listeners.clear()}
       async activateElement(){}
-      async getCurrentState(){return this.currentUri?{paused:this.paused,track_window:{current_track:{uri:this.currentUri}}}:null}
+      async getCurrentState(){return this.currentUri?{paused:this.paused,position:this.position,duration:180000,track_window:{current_track:{uri:this.currentUri}}}:null}
+      async seek(position:number){this.position=position;this.emit(this.currentUri,this.paused)}
       async resume(){this.emit(this.currentUri,false)}
       async pause(){this.emit(this.currentUri,true)}
     }
@@ -66,7 +68,7 @@ test('real-library route paginates all tracks, reviews past25, restores and expo
   await page.getByRole('button',{name:'Продолжить без звука'}).click()
   await page.getByLabel('Ещё действия',{exact:true}).click()
   await page.locator('.track-details h2').click()
-  for(let i=0;i<27;i++)await page.keyboard.press(i%2?'ArrowRight':'ArrowLeft')
+  for(let i=0;i<27;i++){await page.keyboard.press(i%2?'ArrowRight':'ArrowLeft');await expect(page.locator('.session-progress > span')).toHaveText(`${i+2} / 70`)}
   await expect(page.locator('.session-progress > span')).toHaveText('28 / 70')
   const next=await page.locator('.track-details h2').innerText()
   await reviewOption(page, 'Проверить решения')
@@ -184,4 +186,30 @@ test('recovers browser autoplay refusal on the same SDK using the next explicit 
  await expect(page.getByRole('status')).toContainText('Играет текущий трек')
  expect(writes.filter(write=>write.path==='me/player/play')).toHaveLength(1)
  expect(writes.filter(write=>write.path==='me/player')).toHaveLength(1)
+})
+
+
+test('live-mode time advances and mouse seeking uses the SDK position',async({page})=>{
+ await fixture(page);await page.goto('/');await page.getByRole('button',{name:/Моя музыка/}).click()
+ await expect(page.getByRole('status')).toContainText('Играет текущий трек')
+ const slider=page.getByRole('slider',{name:'Позиция воспроизведения'})
+ await expect(slider).toBeEnabled()
+ await expect.poll(async()=>Number(await slider.inputValue())).toBeGreaterThan(2200)
+ const box=(await slider.boundingBox())!;await page.mouse.click(box.x+box.width*.5,box.y+box.height*.5)
+ await expect.poll(async()=>Number(await slider.inputValue())).toBeGreaterThan(80000)
+ await expect.poll(async()=>Number(await slider.inputValue())).toBeLessThan(110000)
+ await page.getByRole('button',{name:'Пауза',exact:true}).click()
+ const paused=Number(await slider.inputValue());await page.waitForTimeout(600)
+ expect(Number(await slider.inputValue())).toBe(paused)
+})
+
+
+test('intro skip is optional and seeks the current long track from its menu',async({page})=>{
+ await fixture(page);await page.goto('/');await page.getByRole('button',{name:/Моя музыка/}).click()
+ await expect(page.getByRole('status')).toContainText('Играет текущий трек')
+ await page.getByLabel('Ещё действия',{exact:true}).click()
+ await page.getByRole('button',{name:/Пропускать вступление/}).click()
+ await expect.poll(async()=>Number(await page.getByRole('slider',{name:'Позиция воспроизведения'}).inputValue())).toBeGreaterThanOrEqual(30000)
+ await page.getByLabel('Ещё действия',{exact:true}).click()
+ await expect(page.getByRole('button',{name:/Пропускать вступление/})).toHaveAttribute('aria-pressed','true')
 })

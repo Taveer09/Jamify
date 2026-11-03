@@ -7,9 +7,10 @@ import type {Entry,PlaybackState} from '../../src/contracts'
 class Player{
  static all:Player[]=[]
  listeners=new Map<string,(value:unknown)=>void>()
- state:{paused:boolean;track_window:{current_track:{uri:string}}}|null=null
+ state:{paused:boolean;position?:number;duration?:number;track_window:{current_track:{uri:string}}}|null=null
  activateElement=vi.fn().mockResolvedValue(undefined)
  pause=vi.fn().mockResolvedValue(undefined)
+ seek=vi.fn(async(position:number)=>{if(this.state){this.state={...this.state,position};this.emit('player_state_changed',this.state)}})
  disconnect=vi.fn()
  getCurrentState=vi.fn(async()=>this.state)
  resume=vi.fn(async()=>{if(this.state){this.state={...this.state,paused:false};this.emit('player_state_changed',this.state)}})
@@ -103,6 +104,60 @@ describe('playback recovery using real SDK adapter',()=>{
   const reset=gateway.reconnect();release();await first;await reset
   expect(connect).toHaveBeenCalledTimes(2);expect(calls.mock.calls.some(call=>String(call[0]).includes('/play?'))).toBe(true)
   expect(state?.status).not.toBe('error');gateway.dispose();connect.mockRestore()
+ })
+
+ it('advances time between SDK snapshots and stops on pause',async()=>{
+  vi.useFakeTimers();Object.assign(window,{setTimeout,clearTimeout})
+  const gateway=new SpotifyPlaybackGateway(async()=>'fixture',api(request()));let state:PlaybackState|undefined
+  gateway.subscribe(value=>{state=value});gateway.select({playbackUri:'requested',durationMs:180000} as Entry);await gateway.play()
+  const sdk=Player.all[0];sdk.state={...local(false),position:1000,duration:180000};sdk.emit('player_state_changed',sdk.state)
+  await vi.advanceTimersByTimeAsync(2500);expect(state?.positionMs).toBeGreaterThanOrEqual(3250)
+  await gateway.pause();const stopped=state?.positionMs;await vi.advanceTimersByTimeAsync(2000);expect(state?.positionMs).toBe(stopped)
+  gateway.dispose();expect(vi.getTimerCount()).toBe(0)
+ })
+ it('revokes playing evidence when a local SDK poll loses state',async()=>{
+  vi.useFakeTimers();Object.assign(window,{setTimeout,clearTimeout})
+  const gateway=new SpotifyPlaybackGateway(async()=>'fixture',api(request()));let state:PlaybackState|undefined
+  gateway.subscribe(value=>{state=value});gateway.select({playbackUri:'requested',durationMs:180000} as Entry);await gateway.play()
+  Player.all[0].emit('player_state_changed',{...local(false),position:1000,duration:180000})
+  await vi.advanceTimersByTimeAsync(1000);expect(state?.actualUri).toBeNull();expect(state?.status).toBe('idle');gateway.dispose()
+ })
+ it('seeks only the same SDK track and ignores an older poll after seek',async()=>{
+  vi.useFakeTimers();Object.assign(window,{setTimeout,clearTimeout})
+  const calls=request(),gateway=new SpotifyPlaybackGateway(async()=>'fixture',api(calls));let state:PlaybackState|undefined
+  gateway.subscribe(value=>{state=value});gateway.select({playbackUri:'requested',durationMs:180000} as Entry);await gateway.play()
+  const sdk=Player.all[0];sdk.state={...local(false),position:1000,duration:180000};sdk.emit('player_state_changed',sdk.state)
+  let release!:(value:Player['state'])=>void;const stale=new Promise<Player['state']>(resolve=>{release=resolve})
+  sdk.getCurrentState.mockImplementationOnce(()=>stale);await vi.advanceTimersByTimeAsync(1000)
+  await gateway.seek(45000)
+  expect(sdk.seek).toHaveBeenCalledWith(45000);const position=state?.positionMs
+  release({...local(false),position:1000,duration:180000});await vi.advanceTimersByTimeAsync(100)
+  expect(state?.positionMs).toBe(position);expect(calls.mock.calls.some(call=>String(call[0]).includes('/seek'))).toBe(false);gateway.dispose()
+ })
+ it('cancelled seek after device replacement never publishes its target',async()=>{
+  const gateway=new SpotifyPlaybackGateway(async()=>'fixture',api(request()));let state:PlaybackState|undefined
+  gateway.subscribe(value=>{state=value});gateway.select({playbackUri:'requested',durationMs:180000} as Entry);await gateway.play()
+  const sdk=Player.all[0];sdk.state={...local(false),position:1000,duration:180000};sdk.emit('player_state_changed',sdk.state)
+  let release!:(value:Player['state'])=>void;const held=new Promise<Player['state']>(resolve=>{release=resolve})
+  sdk.getCurrentState.mockImplementationOnce(()=>held);const seek=gateway.seek(45000)
+  await Promise.resolve();await Promise.resolve();sdk.emit('ready',{device_id:'replacement'});release(sdk.state)
+  await seek;expect(sdk.seek).not.toHaveBeenCalled();expect(state?.positionMs).not.toBe(45000);gateway.dispose()
+ })
+ it.each([180000,40000])('intro skipping respects track duration %s',async(durationMs)=>{
+  const calls=request(),gateway=new SpotifyPlaybackGateway(async()=>'fixture',api(calls))
+  gateway.setSkipIntro(true);gateway.select({playbackUri:'requested',durationMs} as Entry);await gateway.play()
+  expect(calls.mock.calls.find(call=>String(call[0]).includes('/play?'))?.[2]).toEqual({uris:['requested'],...(durationMs>45000?{position_ms:30000}:{})});gateway.dispose()
+ })
+
+ it('does not poll fresh SDK state while a seek is pending',async()=>{
+  vi.useFakeTimers();Object.assign(window,{setTimeout,clearTimeout})
+  const gateway=new SpotifyPlaybackGateway(async()=>'fixture',api(request()));gateway.select({playbackUri:'requested',durationMs:180000} as Entry);await gateway.play()
+  const sdk=Player.all[0];sdk.state={...local(false),position:1000,duration:180000};sdk.emit('player_state_changed',sdk.state)
+  let release!:()=>void;const held=new Promise<void>(done=>{release=done});sdk.seek.mockImplementationOnce(async()=>held)
+  const seek=gateway.seek(45000);await vi.advanceTimersByTimeAsync(0)
+  const reads=sdk.getCurrentState.mock.calls.length;await vi.advanceTimersByTimeAsync(2500)
+  expect(sdk.getCurrentState.mock.calls.length).toBe(reads)
+  release();await seek;gateway.dispose()
  })
 
 })

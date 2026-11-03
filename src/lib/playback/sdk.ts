@@ -10,6 +10,7 @@ interface SdkPlayer {
   pause(): Promise<void>
   getCurrentState?(): Promise<unknown>
   resume?(): Promise<void>
+  seek?(positionMs:number):Promise<void>
 }
 interface Sdk {
   Player: new (options: { name: string; getOAuthToken: (callback: (token: string) => void) => void; volume: number }) => SdkPlayer
@@ -21,7 +22,7 @@ declare global {
   }
 }
 type SdkErrorCode = 'initialization_error'|'authentication_error'|'account_error'|'playback_error'|'autoplay_failed'
-export type PlayerNotice = { code?: SdkErrorCode; state: 'idle' | 'ready' | 'playing' | 'paused' | 'error'; uri?: string; message?: string; positionMs?: number; durationMs?: number }
+export type PlayerNotice = { sampled?:boolean; canSeek?:boolean; code?: SdkErrorCode; state: 'idle' | 'ready' | 'playing' | 'paused' | 'error'; uri?: string; message?: string; positionMs?: number; durationMs?: number }
 async function bounded<T>(promise:Promise<T>):Promise<T>{
   let timer:ReturnType<typeof setTimeout>|undefined
   try{return await Promise.race([promise,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new PlaybackFailure({stage:'sdk',status:null,reason:'SDK_TIMEOUT'})),10_000)})])}
@@ -101,8 +102,8 @@ export class BrowserPlayer {
       }
       player.addListener('player_state_changed', (value) => {
         if (this.disposed) return
-        const data = z.object({ paused: z.boolean(), position: z.number().optional(), duration: z.number().optional(), track_window: z.object({ current_track: z.object({ uri: z.string() }) }) }).safeParse(value)
-        if (data.success) this.notify({ state: data.data.paused ? 'paused' : 'playing', uri: data.data.track_window.current_track.uri, ...(data.data.position === undefined ? {} : { positionMs: data.data.position }), ...(data.data.duration === undefined ? {} : { durationMs: data.data.duration }) })
+        const data = z.object({ paused: z.boolean(), position: z.number().optional(), duration: z.number().optional(), disallows:z.object({seeking:z.boolean().optional()}).optional(), track_window: z.object({ current_track: z.object({ uri: z.string() }) }) }).safeParse(value)
+        if (data.success) this.notify({ state: data.data.paused ? 'paused' : 'playing', uri: data.data.track_window.current_track.uri, canSeek:Boolean(this.player?.seek)&&data.data.disallows?.seeking!==true, ...(data.data.position === undefined ? {} : { positionMs: data.data.position }), ...(data.data.duration === undefined ? {} : { durationMs: data.data.duration }) })
         else this.notify({ state: 'idle' })
       })
       void player.connect().then((connected) => {
@@ -113,7 +114,7 @@ export class BrowserPlayer {
 
   activate(): Promise<void> { return bounded(this.player?.activateElement() ?? Promise.resolve()) }
 
-  async play(uri: string, api: SpotifyApi, isCurrent: () => boolean = () => true): Promise<void> {
+  async play(uri: string, api: SpotifyApi, isCurrent: () => boolean = () => true, startPositionMs=0): Promise<void> {
     if (!this.player || !this.deviceId) throw new Error('Сначала подключи плеер.')
     // Called synchronously from a click, before the first await (browser autoplay policy).
     const instance=this.player,deviceId=this.deviceId
@@ -164,11 +165,29 @@ export class BrowserPlayer {
     }
     if (!mayDispatch()) return
     try {
-      await command('start',`me/player/play?device_id=${encodeURIComponent(deviceId)}`,'PUT',{uris:[uri]})
+      await command('start',`me/player/play?device_id=${encodeURIComponent(deviceId)}`,'PUT',{uris:[uri],...(startPositionMs>0?{position_ms:startPositionMs}:{})})
     } catch (error) {
       this.active = false
       throw error
     }
+  }
+  async refresh(isCurrent:()=>boolean):Promise<void>{
+    const player=this.player,device=this.deviceId
+    if(!player?.getCurrentState||this.disposed)return
+    const value=await bounded(player.getCurrentState())
+    if(this.disposed||this.player!==player||this.deviceId!==device||!isCurrent())return
+    const state=z.object({paused:z.boolean(),position:z.number(),duration:z.number(),disallows:z.object({seeking:z.boolean().optional()}).optional(),track_window:z.object({current_track:z.object({uri:z.string()})})}).safeParse(value)
+    if(state.success)this.notify({sampled:true,state:state.data.paused?'paused':'playing',uri:state.data.track_window.current_track.uri,positionMs:state.data.position,durationMs:state.data.duration,canSeek:Boolean(player.seek)&&state.data.disallows?.seeking!==true})
+    else this.notify({state:'idle'})
+  }
+  async seek(positionMs:number,uri:string,isCurrent:()=>boolean):Promise<boolean>{
+    const player=this.player,device=this.deviceId
+    if(!player?.seek||!player.getCurrentState)throw new Error('Перемотка недоступна.')
+    const current=z.object({disallows:z.object({seeking:z.boolean().optional()}).optional(),track_window:z.object({current_track:z.object({uri:z.string()})})}).safeParse(await bounded(player.getCurrentState()))
+    if(this.disposed||player!==this.player||device!==this.deviceId||!isCurrent())return false
+    if(!current.success||current.data.track_window.current_track.uri!==uri||current.data.disallows?.seeking)throw new Error('Перемотка текущего трека недоступна.')
+    await bounded(player.seek(positionMs))
+    return !this.disposed&&player===this.player&&device===this.deviceId&&isCurrent()
   }
   async pause(): Promise<void> { await bounded(this.player?.pause()??Promise.resolve()) }
   disconnect(): void {
